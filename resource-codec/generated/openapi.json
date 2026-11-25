@@ -29610,6 +29610,10 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "require_billing_address": {
+            "description": "Require a full billing address in Stripe Checkout, even when Stripe would\notherwise collect only what tax calculation or the payment method needs.",
+            "type": "boolean"
           }
         },
         "type": "object"
@@ -32500,6 +32504,10 @@
           "key": {
             "description": "The lookup key the app uses; `^[a-z][a-z0-9_]{0,63}$`, unique in the\ncatalog.",
             "type": "string"
+          },
+          "non_repeatable_single_seat": {
+            "description": "Opt in on an exact one-time licence offer. A verified web buyer ordering\none seat cannot rebuy after a paid, non-refunded one-seat checkout of this\nprice. Unset leaves repeat purchases unchanged.",
+            "type": "boolean"
           },
           "portal_annual_price": {
             "description": "Opt in to a Stripe-hosted switch from this active monthly price to the\nnamed active yearly price on the same product. Both intervals must have\na count of one. Empty disables buyer-initiated switches from this price.",

@@ -18124,6 +18124,12 @@
                   "type": "bool"
                 },
                 {
+                  "field": "checkout_policy.spec.require_billing_address",
+                  "flag": "--spec.require-billing-address",
+                  "summary": "Require a full billing address in Stripe Checkout, even when Stripe would otherwise collect only what tax calculation or the payment method needs.",
+                  "type": "bool"
+                },
+                {
                   "field": "allow_missing",
                   "flag": "--allow-missing",
                   "summary": "Create the policy when it does not exist (declarative upsert).",

@@ -1099,6 +1099,14 @@ pub struct CheckoutPolicySpec {
         alias = "allowTaxIdBuyers"
     )]
     pub allow_tax_id_buyers: bool,
+    /// Require a full billing address in Stripe Checkout, even when Stripe would
+    /// otherwise collect only what tax calculation or the payment method needs.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "requireBillingAddress"
+    )]
+    pub require_billing_address: bool,
 }
 
 /// A Checkout Session is a hosted page where a subject pays for catalog
@@ -4449,6 +4457,15 @@ pub struct Price {
         alias = "portalAnnualPrice"
     )]
     pub portal_annual_price: String,
+    /// Opt in on an exact one-time licence offer. A verified web buyer ordering
+    /// one seat cannot rebuy after a paid, non-refunded one-seat checkout of this
+    /// price. Unset leaves repeat purchases unchanged.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nonRepeatableSingleSeat"
+    )]
+    pub non_repeatable_single_seat: bool,
 }
 
 /// A stored Stripe hint. No payload, customer details, credential or raw error

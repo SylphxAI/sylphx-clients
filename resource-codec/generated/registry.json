@@ -90416,6 +90416,25 @@
             "kind": "scalar",
             "scalar": "bool"
           }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Require a full billing address in Stripe Checkout, even when Stripe would\notherwise collect only what tax calculation or the payment method needs.",
+          "filterable": false,
+          "name": "require_billing_address",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
         }
       ],
       "name": "sylphx.money.v1.CheckoutPolicySpec",
@@ -98964,6 +98983,25 @@
           "type": {
             "kind": "scalar",
             "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Opt in on an exact one-time licence offer. A verified web buyer ordering\none seat cannot rebuy after a paid, non-refunded one-seat checkout of this\nprice. Unset leaves repeat purchases unchanged.",
+          "filterable": false,
+          "name": "non_repeatable_single_seat",
+          "number": 14,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
           }
         }
       ],

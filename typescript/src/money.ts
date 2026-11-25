@@ -506,6 +506,11 @@ export interface CheckoutPolicySpec {
 	 * may still buy. Checkout then asks for the tax id; default false.
 	 */
 	allowTaxIdBuyers?: boolean
+	/**
+	 * Require a full billing address in Stripe Checkout, even when Stripe would
+	 * otherwise collect only what tax calculation or the payment method needs.
+	 */
+	requireBillingAddress?: boolean
 }
 
 /**
@@ -2045,6 +2050,12 @@ export interface Price {
 	 * a count of one. Empty disables buyer-initiated switches from this price.
 	 */
 	portalAnnualPrice?: string
+	/**
+	 * Opt in on an exact one-time licence offer. A verified web buyer ordering
+	 * one seat cannot rebuy after a paid, non-refunded one-seat checkout of this
+	 * price. Unset leaves repeat purchases unchanged.
+	 */
+	nonRepeatableSingleSeat?: boolean
 }
 
 /**
@@ -3606,6 +3617,7 @@ runtime.registerSchemas({
 	'sylphx.money.v1.CheckoutPolicySpec': [
 		['deniedCountryCodes', 'denied_country_codes'],
 		['allowTaxIdBuyers', 'allow_tax_id_buyers'],
+		['requireBillingAddress', 'require_billing_address'],
 	],
 	'sylphx.money.v1.CheckoutSession': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -4044,6 +4056,7 @@ runtime.registerSchemas({
 		['features', 'features', undefined, 'map'],
 		['grantCadence', 'grant_cadence'],
 		['portalAnnualPrice', 'portal_annual_price'],
+		['nonRepeatableSingleSeat', 'non_repeatable_single_seat'],
 	],
 	'sylphx.money.v1.ProcessorEvent': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
