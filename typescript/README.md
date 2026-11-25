@@ -106,15 +106,30 @@ to the browser and at checkout. Global Privacy Control always wins. Call `captur
 client. Consented campaign data expires after 30 days; opting out clears the
 SDK's campaign storage. A trace failure is not evidence of an opt-out region.
 
+Set `requireExplicitConsent: true` to require an explicit grant in every region.
+Signal honors a stored grant or a call to `setConsent('granted')` or
+`setConsent('analytics_only')`. The browser skips the region lookup and doesn't
+collect or buffer campaign data or page paths before grant. `capture()` returns
+`undefined` while analytics consent is denied. GPC still overrides a grant. If
+you bind checkout on the server too, omit the region hint there to apply the
+same opt-in policy.
+
+With `ingest` configured, `pageView(path?, properties?, options?)` sends one view
+per route navigation. Pass `{ eventId: 'pv_pricing_1' }` as the third argument and
+reuse that ID for the same logical view across retries or remounts. Otherwise,
+Signal generates a UUID. Caller properties and IDs are never buffered before
+consent.
+
 For Google Consent Mode v2, pass `google: { mode: 'basic' | 'advanced', gtag,
 load }` to `createSignalBrowser`. Supply an adapter that forwards
 `gtag(command, flags)` to the Google tag as `gtag('consent', command, flags).` Let the SDK call
 `load` to initialize the tag *after* it queues the default flags; don't load or
 configure the tag separately. Basic (default) waits for grant. Advanced allows
 Google's denied-state cookieless pings before an explicit choice in a known
-region; it does not start the tag on GPC or explicit opt-out. Consent Mode
-updates a tag already loaded on the page; it does not unload it, clear cookies
-set by third parties, or guarantee zero network requests after withdrawal.
+region unless explicit-consent mode is on. It does not start the tag on GPC or
+explicit opt-out. Consent Mode updates a tag already loaded on the page; it
+does not unload it, clear cookies set by third parties, or guarantee zero
+network requests after withdrawal.
 
 On the server, import `bindCheckoutAttribution` directly. Pass the original
 browser request's `headers` plus `privacy: { region, storedChoice }` from your trusted

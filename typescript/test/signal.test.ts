@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from 'bun:test'
+import { afterEach, describe, expect, mock, test } from 'bun:test'
 import {
 	bindCheckoutAttribution,
 	createSignalBrowser,
@@ -11,6 +11,7 @@ import {
 	type SignalConsentChoice,
 	type SignalEventInput,
 	type SignalIngestOptions,
+	type SignalPageViewOptions,
 } from '../src/signal.js'
 
 const denied: SignalConsent = {
@@ -392,7 +393,7 @@ for (const region of ['EU', 'UK']) {
 		expect(cookieReads()).toBe(0)
 		signal.setConsent('granted')
 		expect(calls).toEqual([['default', denied], 'load', ['update', granted]])
-		const first = signal.capture()
+		const first: SignalAttribution = signal.capture()
 		location.href = 'https://example.com/checkout'
 		signal.dispose()
 		const reopened = createSignalBrowser({ region })
@@ -624,17 +625,105 @@ for (const via of ['navigator', 'server'] as const) {
 	})
 }
 
+for (const [region, choice, flags] of [
+	['US', 'analytics_only', analyticsOnly],
+	[undefined, 'analytics_only', analyticsOnly],
+	['ROW', 'granted', granted],
+] as const) {
+	test(`explicit consent in ${region ?? 'an unknown region'} does not replay pre-grant data after ${choice}`, async () => {
+		const { location, writes, values, cookieReads } = browser()
+		const { ingest, calls, batches } = ingestTransport()
+		const trace = mock(async () => new Response('loc=US\n'))
+		override('fetch', trace)
+		const google: unknown[] = []
+		location.href = 'https://example.com/landing?utm_source=before&gclid=BeforeClick'
+		const signal = createSignalBrowser({
+			region,
+			requireExplicitConsent: true,
+			ingest,
+			google: { gtag: (...args) => google.push(args), load: () => google.push('load') },
+		})
+		await signal.ready
+		expect(signal.getConsent()).toEqual(denied)
+		expect(google).toEqual([['default', denied]])
+		expect(signal.capture()).toBeUndefined()
+		expect(await signal.track({ eventName: 'before_consent' })).toBe(false)
+		const { options, requests } = transport()
+		await signal.bindCheckoutAttribution(ids, options)
+		expect(await requests[0]?.json()).toEqual({
+			checkout_session_id: 'checkout_123',
+			consent: denied,
+		})
+		expect(cookieReads()).toBe(0)
+		location.href = 'https://example.com/pricing'
+		expect(await signal.pageView('/pricing', { ignored: true }, { eventId: 'before_grant' })).toBe(
+			false,
+		)
+		expect(writes).toEqual([])
+		expect(calls).toHaveLength(0)
+		signal.setConsent(choice)
+		expect(signal.getConsent()).toEqual(flags)
+		expect(google).toEqual([['default', denied], ['update', flags], 'load'])
+		expect(calls).toHaveLength(0)
+		expect(values.has(touchStorageSlot)).toBe(false)
+		expect(await signal.track({ eventName: 'after_consent' })).toBe(true)
+		expect(await signal.pageView()).toBe(true)
+		expect(batches().map(({ events }) => events[0].properties)).toEqual([{}, { path: '/pricing' }])
+		signal.dispose()
+
+		const reopened = createSignalBrowser({ requireExplicitConsent: true })
+		await reopened.ready
+		expect(reopened.getConsent()).toEqual(flags)
+		expect(trace).not.toHaveBeenCalled()
+		reopened.dispose()
+	})
+}
+
+test('GPC denies collection and Google tag load even after explicitly granting consent', async () => {
+	const { writes } = browser()
+	const { ingest, calls } = ingestTransport()
+	const google: unknown[] = []
+	const signal = createSignalBrowser({
+		region: 'US',
+		requireExplicitConsent: true,
+		gpc: true,
+		ingest,
+		google: {
+			mode: 'advanced',
+			gtag: (...args) => google.push(args),
+			load: () => google.push('load'),
+		},
+	})
+	signal.setConsent('granted')
+	expect(signal.getConsent()).toEqual(denied)
+	expect(signal.capture()).toBeUndefined()
+	expect(await signal.track({ eventName: 'visit' })).toBe(false)
+	expect(await signal.pageView()).toBe(false)
+	expect(calls).toHaveLength(0)
+	expect(writes).toEqual([[consentStorageSlot, 'granted']])
+	expect(google).toEqual([['default', denied]])
+	signal.dispose()
+})
+
 test('emits exactly one page_view per navigation, not per effect call', async () => {
 	const { location, writes, values } = browser()
 	const { ingest, calls, batches } = ingestTransport()
 	location.href = 'https://example.com/landing?variant=a#initial'
 	const signal = createSignalBrowser({ region: 'EU', ingest })
-	expect(await signal.pageView(undefined, { ignored: 'before consent' })).toBe(false)
-	expect(await signal.pageView('/landing?variant=a#rerender')).toBe(false)
+	let uuid = 0
+	override('crypto', { randomUUID: () => `random-id-${++uuid}` })
+	expect(
+		await signal.pageView(
+			'/landing?variant=a#rerender',
+			{ ignored: true },
+			{ eventId: 'not_replayed' },
+		),
+	).toBe(false)
 	expect(calls).toHaveLength(0)
 	expect(writes).toEqual([])
 	signal.setConsent('granted')
 	expect(calls).toHaveLength(1)
+	expect(batches()[0].events[0].event_id).toBe('random-id-1')
 	expect(await Promise.all([signal.pageView(), signal.pageView()])).toEqual([false, false])
 	expect(calls).toHaveLength(1)
 	location.href = 'https://example.com/pricing?variant=b'
@@ -734,6 +823,31 @@ test('track sends the exact Signal wire payload and authenticated keepalive requ
 	expect(cookieReads()).toBe(0)
 	expect(cookieWrites()).toBe(0)
 	signal.dispose()
+})
+
+test('pageView sends the caller event ID and rejects invalid IDs without marking the route viewed', async () => {
+	const { location } = browser()
+	location.href = 'https://example.com/pricing'
+	const { ingest, calls, batches } = ingestTransport()
+	const signal = createSignalBrowser({ region: 'US', requireExplicitConsent: false, ingest })
+	for (const eventId of ['', 'not valid', 'x'.repeat(129)]) {
+		expect(await signal.pageView('/pricing', undefined, { eventId })).toBe(false)
+		expect(await signal.track({ eventName: 'page_view', eventId })).toBe(false)
+	}
+	expect(calls).toHaveLength(0)
+	const options: SignalPageViewOptions = { eventId: 'pv_pricing_1' }
+	expect(await signal.pageView('/pricing', { plan: 'pro' }, options)).toBe(true)
+	expect(calls[0]?.url).toBe('https://api.sylphx.com/v1/analytics/events:batch')
+	expect(batches()[0].events[0]).toMatchObject({
+		event_id: 'pv_pricing_1',
+		event_name: 'page_view',
+		properties: { path: '/pricing', plan: 'pro' },
+	})
+	signal.dispose()
+	const remounted = createSignalBrowser({ region: 'US', ingest })
+	expect(await remounted.pageView('/pricing', { plan: 'pro' }, options)).toBe(true)
+	expect(batches()[1].events[0].event_id).toBe('pv_pricing_1')
+	remounted.dispose()
 })
 
 test('page_view strips ad IDs from analytics-only path while preserving the route and UTMs', async () => {

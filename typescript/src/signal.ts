@@ -18,6 +18,7 @@ export {
 	type SignalEventInput,
 	type SignalGoogleConsent,
 	type SignalIngestOptions,
+	type SignalPageViewOptions,
 } from './signal/browser.js'
 export {
 	type ConsentChoice,

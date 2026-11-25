@@ -32,6 +32,8 @@ export interface SignalGoogleConsent {
 export interface SignalBrowserOptions {
 	/** An explicit region overrides the same-origin trace lookup. */
 	region?: string
+	/** Require an explicit stored or set choice in every region. Skips /cdn-cgi/trace and pre-grant buffering. Default: false. */
+	requireExplicitConsent?: boolean
 	/** True if the server received Sec-GPC: 1. A false value never overrides navigator GPC. */
 	gpc?: boolean
 	/** Scope consent and campaign storage for this site (same-origin localStorage). */
@@ -62,6 +64,11 @@ export interface SignalEventInput {
 	numericValue?: number
 	isError?: boolean
 	latencyMs?: number
+}
+
+export interface SignalPageViewOptions {
+	/** Defaults to a random UUID. Supply a stable ID when retrying a logical page view. */
+	eventId?: string
 }
 
 type BrowserBindOptions = Pick<
@@ -95,8 +102,15 @@ function route(url: URL): string {
 }
 
 /** Call once per page, before configuring any Google tags. Does not inject any scripts itself. */
-export function createSignalBrowser(options: SignalBrowserOptions = {}) {
-	const privacy: SignalPrivacy = { region: normalizeRegion(options.region), gpc: options.gpc }
+export function createSignalBrowser<Explicit extends boolean = false>(
+	options: SignalBrowserOptions & { requireExplicitConsent?: Explicit } = {},
+) {
+	const requireExplicitConsent = options.requireExplicitConsent === true
+	// An unknown region disables regional defaults for both ingestion and checkout.
+	const privacy: SignalPrivacy = {
+		region: requireExplicitConsent ? undefined : normalizeRegion(options.region),
+		gpc: options.gpc,
+	}
 	const choiceKey = `${options.storageKey ?? 'sylphx.signal.v1'}.consent`
 	const touchKey = `${options.storageKey ?? 'sylphx.signal.v1'}.touch`
 	const google = options.google
@@ -110,7 +124,7 @@ export function createSignalBrowser(options: SignalBrowserOptions = {}) {
 	let promotedRoute: string | undefined
 	let choiceOverride: SignalConsentChoice | undefined
 	let current: { expiresAt: number; touch: SignalAttribution } | undefined
-	const regionPending = options.region === undefined && !hasGpc(privacy)
+	const regionPending = !requireExplicitConsent && options.region === undefined && !hasGpc(privacy)
 	let loaded = false
 	let disposed = false
 	let previous: SignalConsent | undefined
@@ -172,8 +186,9 @@ export function createSignalBrowser(options: SignalBrowserOptions = {}) {
 		return resolveEffectiveConsent(privacy)
 	}
 
-	function capture(): SignalAttribution {
+	function capture(): SignalAttribution | undefined {
 		const consent = sync()
+		if (requireExplicitConsent && consent.analytics_storage !== 'granted') return undefined
 		const pending = privacy.storedChoice === undefined && !hasGpc(privacy)
 		if (consent.analytics_storage !== 'granted' && !pending) return {}
 		const url = new URL(window.location.href)
@@ -307,18 +322,24 @@ export function createSignalBrowser(options: SignalBrowserOptions = {}) {
 		url: URL,
 		attribution: SignalAttribution,
 		properties?: Record<string, unknown>,
+		eventId?: string,
 	) {
 		const path = route(url)
-		if (!canIngest() || viewed?.path === path) return Promise.resolve(false)
+		if (
+			!canIngest() ||
+			viewed?.path === path ||
+			(eventId !== undefined && !isEventIdentifier(eventId))
+		)
+			return Promise.resolve(false)
 		// Mark before starting fetch, including concurrent calls and ambiguous network failures.
 		viewed = { path, locationPath: route(new URL(window.location.href)) }
 		if (!allowsAds(resolveEffectiveConsent(privacy))) stripSignalClickIds(url)
-		return emit({ eventName: 'page_view', properties }, attribution, route(url))
+		return emit({ eventName: 'page_view', properties, eventId }, attribution, route(url))
 	}
 
 	function refresh() {
 		const attribution = capture()
-		if (pendingPath !== undefined && canIngest()) {
+		if (attribution && pendingPath !== undefined && canIngest()) {
 			pendingPath = undefined
 			void emitPage(new URL(window.location.href), attribution)
 		}
@@ -357,17 +378,25 @@ export function createSignalBrowser(options: SignalBrowserOptions = {}) {
 			}
 			refresh()
 		},
-		/** Call on SPA navigation to capture campaign parameters. Pending touches stay in memory. */
-		capture,
+		/** Call on SPA navigation. In explicit-consent mode, returns undefined before grant. */
+		capture: capture as () => (
+			true extends Explicit ? SignalAttribution | undefined : SignalAttribution
+		),
 		/** Best-effort authenticated keepalive fetch. Caller properties take precedence over attribution. */
 		async track(event: SignalEventInput): Promise<boolean> {
 			if (disposed || !endpoint) return false
-			return emit(event, capture())
+			const attribution = capture()
+			return attribution ? emit(event, attribution) : false
 		},
-		/** Emit once per route. Before consent, keep only the path, not caller properties. */
-		async pageView(path?: string, properties?: Record<string, unknown>): Promise<boolean> {
+		/** Emit once per route. Before consent, only default mode can keep the path; neither keeps properties or the ID. */
+		async pageView(
+			path?: string,
+			properties?: Record<string, unknown>,
+			options?: SignalPageViewOptions,
+		): Promise<boolean> {
 			if (disposed || !endpoint) return false
 			const attribution = capture()
+			if (!attribution) return false
 			const location = new URL(window.location.href)
 			let url: URL
 			try {
@@ -381,7 +410,7 @@ export function createSignalBrowser(options: SignalBrowserOptions = {}) {
 				return false
 			}
 			pendingPath = undefined
-			return emitPage(url, attribution, properties)
+			return emitPage(url, attribution, properties, options?.eventId)
 		},
 		async bindCheckoutAttribution(checkout: CheckoutIdentifiers, binding: BrowserBindOptions) {
 			await ready
