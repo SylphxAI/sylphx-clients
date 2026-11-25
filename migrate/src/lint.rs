@@ -260,6 +260,46 @@ fn enum_append(t: &Tokens<'_>) -> bool {
         && matches!(skip(&rest[2..], &["if", "not", "exists"]), [label] if label.kind == Kind::String)
 }
 
+fn identifier(t: &Token<'_>) -> bool {
+    t.kind == Kind::Word || (t.kind == Kind::Ident && t.text.len() > 2 && !t.text.contains('\0'))
+}
+
+fn col_id(t: &Token<'_>) -> bool {
+    // PostgreSQL 18 ColId excludes reserved and type/function-name keywords
+    // (src/include/parser/kwlist.h). Quoted names are never keywords.
+    const NON_COL_IDS: &str = "all analyse analyze and any array as asc asymmetric authorization \
+        binary both case cast check collate collation column concurrently constraint create cross \
+        current_catalog current_date current_role current_schema current_time current_timestamp \
+        current_user default deferrable desc distinct do else end except false fetch for foreign \
+        freeze from full grant group having ilike in initially inner intersect into is isnull join \
+        lateral leading left like limit localtime localtimestamp natural not notnull null offset \
+        on only or order outer overlaps placing primary references returning right select \
+        session_user similar some symmetric system_user table tablesample then to trailing true \
+        union unique user using variadic verbose when where window with";
+    identifier(t)
+        && (t.kind == Kind::Ident || !NON_COL_IDS.split_ascii_whitespace().any(|w| t.is(w)))
+}
+
+fn drop_policy(t: &Tokens<'_>) -> bool {
+    let [policy, on, table, tail @ ..] = skip(t, &["if", "exists"]) else {
+        return false;
+    };
+    if !col_id(policy) || !on.is("on") || !col_id(table) {
+        return false;
+    }
+    // Table references allow at most database.schema.table. After a dot,
+    // PostgreSQL permits keywords as well as ordinary identifiers.
+    let mut tail = tail;
+    for _ in 0..2 {
+        match tail {
+            [dot, name, rest @ ..] if dot.is(".") && identifier(name) => tail = rest,
+            _ => break,
+        }
+    }
+    tail.is_empty()
+        || matches!(tail, [behavior] if behavior.is("cascade") || behavior.is("restrict"))
+}
+
 fn allow_destructive<'a>(s: &Statement<'a>) -> Option<&'a str> {
     s.comments.last().and_then(|c| {
         let note = c.trim().strip_prefix("sylphx:allow-destructive ")?.trim();
@@ -467,6 +507,12 @@ pub(super) fn check(m: &Migration) -> Checked<'_> {
                 } else {
                     rules.push(LEX);
                 }
+            } else {
+                rules.push(UNSUPPORTED);
+            }
+        } else if starts(t, &["drop", "policy"]) {
+            if drop_policy(&t[2..]) {
+                destructive = true;
             } else {
                 rules.push(UNSUPPORTED);
             }

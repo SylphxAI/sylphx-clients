@@ -104,3 +104,75 @@ fn existing_index_targets_remain_strict_even_with_guarded_create() {
         ["MIG107"]
     );
 }
+
+#[test]
+fn drop_policy_requires_a_statement_local_destructive_review() {
+    for sql in [
+        "DROP POLICY p ON t;",
+        "drop policy if exists p on app.t restrict;",
+        "DROP POLICY p ON db.app.select;",
+        r#"DROP POLICY "on" ON "App"."table" CASCADE;"#,
+    ] {
+        assert_eq!(rules(sql), ["MIG105"], "{sql}");
+    }
+    let sql = "-- sylphx:allow-destructive TICKET-1: replace policy atomically\n\
+               DROP POLICY IF EXISTS p ON app.t;\n\
+               CREATE POLICY p ON app.t AS RESTRICTIVE FOR ALL USING (true);";
+    let tree = SourceTree::from_blobs(vec![("1_case.sql".into(), sql.into())], None).unwrap();
+    let checked = lint::check(&tree.files[&1]);
+    assert!(checked.diagnostics.is_empty());
+    assert!(!checked.concurrent);
+    assert_eq!(checked.spans.len(), 2);
+    assert_eq!(checked.overrides, ["TICKET-1: replace policy atomically"]);
+    assert_eq!(
+        rules("-- sylphx:allow-destructive TICKET-1: replace policy\nDROP POLICY p ON t; DROP POLICY q ON t;"),
+        ["MIG105"]
+    );
+    assert_eq!(
+        rules("-- sylphx:allow-destructive TICKET-1:\nDROP POLICY p ON t;"),
+        ["MIG105"]
+    );
+}
+
+#[test]
+fn drop_policy_does_not_waive_other_lint_rules() {
+    for sql in [
+        "DROP POLICY;",
+        "DROP POLICY IF p ON t;",
+        "DROP POLICY p t;",
+        "DROP POLICY p ON;",
+        "DROP POLICY app.p ON app.t;",
+        "DROP POLICY p ON app.;",
+        "DROP POLICY p ON a.b.c.d;",
+        "DROP POLICY p ON 't';",
+        r#"DROP POLICY "" ON t;"#,
+        "DROP POLICY p ON SELECT;",
+        "DROP POLICY ON ON t;",
+        "DROP POLICY p ON t CASCADE RESTRICT;",
+        "DROP POLICY p ON t CASCADE DROP TABLE t;",
+        "DROP POLICY p ON t, other;",
+    ] {
+        assert_eq!(rules(sql), ["MIG002"], "{sql}");
+        assert_eq!(
+            rules(&format!(
+                "-- sylphx:allow-destructive TICKET-1: reviewed\n{sql}"
+            )),
+            ["MIG002"],
+            "{sql}"
+        );
+    }
+    assert_eq!(
+        rules("-- sylphx:allow-destructive TICKET-1: reviewed\nDROP POLICY p ON t; SELECT 1;"),
+        ["MIG002"]
+    );
+    assert_eq!(
+        rules(
+            r#"-- sylphx:allow-destructive TICKET-1: reviewed
+DROP POLICY p ON public."_sylphx_migrations";"#
+        ),
+        ["MIG109"]
+    );
+    assert!(
+        rules("ALTER POLICY p ON app.t TO app_reader USING (true) WITH CHECK (true);").is_empty()
+    );
+}
