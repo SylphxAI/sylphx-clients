@@ -1,6 +1,6 @@
 [package]
 name = "sylphx-migrate"
-version = "0.1.2"
+version = "0.1.3"
 description = "PostgreSQL migration planning and execution for Sylphx."
 edition = "2021"
 rust-version = "1.87"
