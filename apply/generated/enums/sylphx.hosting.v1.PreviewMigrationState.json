@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.hosting.v1.PreviewMigrationState",
+  "package": "sylphx.hosting.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "PREVIEW_MIGRATION_STATE_PENDING",
+      "wire": "pending"
+    },
+    {
+      "number": 2,
+      "proto_name": "PREVIEW_MIGRATION_STATE_PASSED",
+      "wire": "passed"
+    },
+    {
+      "number": 3,
+      "proto_name": "PREVIEW_MIGRATION_STATE_FAILED",
+      "wire": "failed"
+    }
+  ]
+}

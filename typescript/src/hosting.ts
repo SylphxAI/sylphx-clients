@@ -298,6 +298,16 @@ export interface Preview {
 	readonly status?: PreviewStatus
 }
 
+/** PreviewDatabaseBranchStatus is the attached branch's observed identity. */
+export interface PreviewDatabaseBranchStatus {
+	/** The managed database from which the branch was provisioned. */
+	readonly parentDatabaseId?: string
+	/** The identity of the managed branch database, not a connection string. */
+	readonly branchId?: string
+	/** Progress of applying the exact preview head's migrations to the branch. */
+	readonly migrationStatus?: PreviewMigrationState
+}
+
 /** PreviewSpec is the caller-writable state of a Preview. */
 export interface PreviewSpec {
 	/** The Service previewed. */
@@ -320,6 +330,10 @@ export interface PreviewStatus {
 	readonly commit?: string
 	/** When an idle Preview is torn down. */
 	readonly expireTime?: string
+	/** Effective deployment protection policy; new previews require login. */
+	readonly protectionMode?: string
+	/** Observed database branch, when the preview has one. Never carries credentials. */
+	readonly databaseBranch?: PreviewDatabaseBranchStatus
 }
 
 /** One bounded safe HTTP instrument, without request headers or a body. */
@@ -767,6 +781,9 @@ export type HealthProtocol = 'http' | 'tcp' | (string & {})
 /** InstanceSize is the machine size of each instance. */
 export type InstanceSize = 'nano' | 'micro' | 'small' | 'standard' | 'large' | 'xlarge' | 'xxlarge' | (string & {})
 
+/** PreviewMigrationState is scoped to the exact current preview head. */
+export type PreviewMigrationState = 'pending' | 'passed' | 'failed' | (string & {})
+
 /** PreviewState is the lifecycle of a Preview. */
 export type PreviewState = 'building' | 'serving' | 'failed' | 'closed' | (string & {})
 
@@ -878,6 +895,11 @@ runtime.registerSchemas({
 		['spec', 'spec', 'sylphx.hosting.v1.PreviewSpec'],
 		['status', 'status', 'sylphx.hosting.v1.PreviewStatus'],
 	],
+	'sylphx.hosting.v1.PreviewDatabaseBranchStatus': [
+		['parentDatabaseId', 'parent_database_id'],
+		['branchId', 'branch_id'],
+		['migrationStatus', 'migration_status'],
+	],
 	'sylphx.hosting.v1.PreviewSpec': [
 		['pullRequest', 'pull_request'],
 	],
@@ -885,6 +907,8 @@ runtime.registerSchemas({
 		['observedGeneration', 'observed_generation'],
 		['conditions', 'conditions', 'sylphx.common.v1.Condition'],
 		['expireTime', 'expire_time'],
+		['protectionMode', 'protection_mode'],
+		['databaseBranch', 'database_branch', 'sylphx.hosting.v1.PreviewDatabaseBranchStatus'],
 	],
 	'sylphx.hosting.v1.ProbeServiceObservationRequest': [
 		['expectStatus', 'expect_status'],

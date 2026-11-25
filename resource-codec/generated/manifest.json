@@ -2964,6 +2964,31 @@
       ]
     },
     {
+      "doc": "PreviewMigrationState is scoped to the exact current preview head.",
+      "name": "sylphx.hosting.v1.PreviewMigrationState",
+      "package": "sylphx.hosting.v1",
+      "values": [
+        {
+          "doc": "A migration check is in progress.",
+          "number": 1,
+          "proto_name": "PREVIEW_MIGRATION_STATE_PENDING",
+          "wire": "pending"
+        },
+        {
+          "doc": "The migration check passed for this head and branch.",
+          "number": 2,
+          "proto_name": "PREVIEW_MIGRATION_STATE_PASSED",
+          "wire": "passed"
+        },
+        {
+          "doc": "The migration check failed for this head and branch.",
+          "number": 3,
+          "proto_name": "PREVIEW_MIGRATION_STATE_FAILED",
+          "wire": "failed"
+        }
+      ]
+    },
+    {
       "doc": "PreviewState is the lifecycle of a Preview.",
       "name": "sylphx.hosting.v1.PreviewState",
       "package": "sylphx.hosting.v1",
@@ -75698,6 +75723,70 @@
       "package": "sylphx.hosting.v1"
     },
     {
+      "doc": "PreviewDatabaseBranchStatus is the attached branch's observed identity.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The managed database from which the branch was provisioned.",
+          "filterable": false,
+          "name": "parent_database_id",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The identity of the managed branch database, not a connection string.",
+          "filterable": false,
+          "name": "branch_id",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Progress of applying the exact preview head's migrations to the branch.",
+          "filterable": false,
+          "name": "migration_status",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "enum",
+            "name": "sylphx.hosting.v1.PreviewMigrationState"
+          }
+        }
+      ],
+      "name": "sylphx.hosting.v1.PreviewDatabaseBranchStatus",
+      "package": "sylphx.hosting.v1"
+    },
+    {
       "doc": "PreviewSpec is the caller-writable state of a Preview.",
       "fields": [
         {
@@ -75865,6 +75954,44 @@
           "type": {
             "kind": "well_known",
             "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Effective deployment protection policy; new previews require login.",
+          "filterable": false,
+          "name": "protection_mode",
+          "number": 14,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Observed database branch, when the preview has one. Never carries credentials.",
+          "filterable": false,
+          "name": "database_branch",
+          "number": 15,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.hosting.v1.PreviewDatabaseBranchStatus"
           }
         }
       ],

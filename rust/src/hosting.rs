@@ -631,6 +631,39 @@ pub struct Preview {
     pub status: Option<PreviewStatus>,
 }
 
+/// PreviewDatabaseBranchStatus is the attached branch's observed identity.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct PreviewDatabaseBranchStatus {
+    /// The managed database from which the branch was provisioned.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "parentDatabaseId"
+    )]
+    pub parent_database_id: String,
+    /// The identity of the managed branch database, not a connection string.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "branchId"
+    )]
+    pub branch_id: String,
+    /// Progress of applying the exact preview head's migrations to the branch.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "migrationStatus"
+    )]
+    pub migration_status: Option<PreviewMigrationState>,
+}
+
 /// PreviewSpec is the caller-writable state of a Preview.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -694,6 +727,24 @@ pub struct PreviewStatus {
         alias = "expireTime"
     )]
     pub expire_time: String,
+    /// Effective deployment protection policy; new previews require login.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "protectionMode"
+    )]
+    pub protection_mode: String,
+    /// Observed database branch, when the preview has one. Never carries credentials.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "databaseBranch"
+    )]
+    pub database_branch: Option<PreviewDatabaseBranchStatus>,
 }
 
 /// One bounded safe HTTP instrument, without request headers or a body.
@@ -1716,6 +1767,61 @@ impl<'de> serde::Deserialize<'de> for InstanceSize {
 }
 
 impl crate::runtime::QueryValue for InstanceSize {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// PreviewMigrationState is scoped to the exact current preview head.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum PreviewMigrationState {
+    /// A migration check is in progress.
+    Pending,
+    /// The migration check passed for this head and branch.
+    Passed,
+    /// The migration check failed for this head and branch.
+    Failed,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl PreviewMigrationState {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Pending => "pending",
+            Self::Passed => "passed",
+            Self::Failed => "failed",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "pending" => Self::Pending,
+            "passed" => Self::Passed,
+            "failed" => Self::Failed,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for PreviewMigrationState {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for PreviewMigrationState {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for PreviewMigrationState {
     fn query_value(&self) -> Option<String> {
         Some(self.as_str().to_string())
     }

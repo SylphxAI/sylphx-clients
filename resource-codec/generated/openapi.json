@@ -24469,6 +24469,36 @@
         ],
         "type": "object"
       },
+      "sylphx.hosting.v1.PreviewDatabaseBranchStatus": {
+        "description": "PreviewDatabaseBranchStatus is the attached branch's observed identity.",
+        "properties": {
+          "branch_id": {
+            "description": "The identity of the managed branch database, not a connection string.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "migration_status": {
+            "$ref": "#/components/schemas/sylphx.hosting.v1.PreviewMigrationState",
+            "description": "Progress of applying the exact preview head's migrations to the branch.",
+            "readOnly": true
+          },
+          "parent_database_id": {
+            "description": "The managed database from which the branch was provisioned.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.hosting.v1.PreviewMigrationState": {
+        "description": "PreviewMigrationState is scoped to the exact current preview head.",
+        "enum": [
+          "pending",
+          "passed",
+          "failed"
+        ],
+        "type": "string"
+      },
       "sylphx.hosting.v1.PreviewSpec": {
         "description": "PreviewSpec is the caller-writable state of a Preview.",
         "properties": {
@@ -24518,6 +24548,11 @@
             "readOnly": true,
             "type": "array"
           },
+          "database_branch": {
+            "$ref": "#/components/schemas/sylphx.hosting.v1.PreviewDatabaseBranchStatus",
+            "description": "Observed database branch, when the preview has one. Never carries credentials.",
+            "readOnly": true
+          },
           "expire_time": {
             "description": "When an idle Preview is torn down.",
             "format": "date-time",
@@ -24527,6 +24562,11 @@
           "observed_generation": {
             "description": "The generation this status was computed from.",
             "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "protection_mode": {
+            "description": "Effective deployment protection policy; new previews require login.",
             "readOnly": true,
             "type": "string"
           },

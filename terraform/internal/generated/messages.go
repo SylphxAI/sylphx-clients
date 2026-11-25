@@ -729,6 +729,15 @@ func eventsWebhookEndpointStatus() []def.Field {
 	}
 }
 
+// hostingPreviewDatabaseBranchStatus is `sylphx.hosting.v1.PreviewDatabaseBranchStatus`.
+func hostingPreviewDatabaseBranchStatus() []def.Field {
+	return []def.Field{
+		{Name: "parent_database_id", Kind: def.String, Flags: def.OutputOnly, Doc: "The managed database from which the branch was provisioned."},
+		{Name: "branch_id", Kind: def.String, Flags: def.OutputOnly, Doc: "The identity of the managed branch database, not a connection string."},
+		{Name: "migration_status", Kind: def.Enum, Values: []string{"pending", "passed", "failed"}, Flags: def.OutputOnly, Doc: "Progress of applying the exact preview head's migrations to the branch."},
+	}
+}
+
 // hostingPreviewSpec is `sylphx.hosting.v1.PreviewSpec`.
 func hostingPreviewSpec() []def.Field {
 	return []def.Field{
@@ -746,6 +755,8 @@ func hostingPreviewStatus() []def.Field {
 		{Name: "uri", Kind: def.String, Flags: def.OutputOnly, Doc: "The Preview's URL."},
 		{Name: "commit", Kind: def.String, Flags: def.OutputOnly, Doc: "The head commit now serving."},
 		{Name: "expire_time", Kind: def.Timestamp, Flags: def.OutputOnly, Doc: "When an idle Preview is torn down."},
+		{Name: "protection_mode", Kind: def.String, Flags: def.OutputOnly, Doc: "Effective deployment protection policy; new previews require login."},
+		{Name: "database_branch", Kind: def.Message, Msg: hostingPreviewDatabaseBranchStatus, Flags: def.OutputOnly, Doc: "Observed database branch, when the preview has one. Never carries credentials."},
 	}
 }
 
