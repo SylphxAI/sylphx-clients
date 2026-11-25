@@ -148,7 +148,7 @@ impl SourceTree {
             .iter()
             .map(|file| {
                 let m = &self.files[&file.id.parse::<i64>().expect("checked migration ID")];
-                if let Some(d) = crate::lint::check(m).diagnostics.first() {
+                if let Some(d) = crate::lint::admitted(m, true).diagnostics.first() {
                     return Err(format!(
                         "native migration lint failed: {} ({})",
                         file.file, d.rule_id

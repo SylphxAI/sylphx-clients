@@ -7,6 +7,7 @@ use std::{
 use serde::Serialize;
 
 use super::{
+    baseline::Legacy,
     sql::{self, Kind, Statement, Token},
     Migration,
 };
@@ -67,6 +68,11 @@ const TRANSACTION: Rule = (
     "MIG108",
     "Remove explicit transaction control; the runner owns transaction and ledger boundaries.",
 );
+const LEDGER_NAMES: [&str; 3] = [
+    "_sylphx_migrations",
+    "_sqlx_migrations",
+    "atlas_schema_revisions",
+];
 const RESERVED: Rule = (
     "MIG109",
     "Do not modify or reference migration ledger objects in migration SQL.",
@@ -144,11 +150,43 @@ fn plain_table(tokens: &Tokens<'_>) -> bool {
     depth == 0
 }
 
-fn literal_default(t: &Tokens<'_>) -> bool {
+fn builtin_type(t: &Tokens<'_>, name: &str) -> Option<usize> {
+    if starts(t, &["pg_catalog", ".", name]) {
+        Some(3)
+    } else if starts(t, &[name]) {
+        Some(1)
+    } else {
+        None
+    }
+}
+
+// Only match the exact column type, with no array, typmod, domain or
+// collation conversion. PostgreSQL still validates the literal itself.
+fn default_column_type(t: &Tokens<'_>, name: &str) -> bool {
+    let column = skip(
+        skip(skip(t, &["add"]), &["column"]),
+        &["if", "not", "exists"],
+    );
+    column.first().and_then(Token::ident).is_some()
+        && builtin_type(&column[1..], name).is_some_and(|n| {
+            column.len() == n + 1
+                || (column.len() == n + 3 && starts(&column[n + 1..], &["not", "null"]))
+        })
+}
+
+fn fast_default(t: &Tokens<'_>) -> bool {
     let Some(i) = t.iter().position(|t| t.is("default")) else {
         return false;
     };
     let mut rest = &t[i + 1..];
+    // PG11+ evaluates nonvolatile defaults once; now() is STABLE, unlike
+    // clock_timestamp(). Match only timestamptz -> timestamptz.
+    if default_column_type(&t[..i], "timestamptz") {
+        let call = skip(rest, &["pg_catalog", "."]);
+        if starts(call, &["now", "(", ")"]) {
+            return default_suffix(&call[3..]);
+        }
+    }
     if starts(rest, &["+"]) || starts(rest, &["-"]) {
         rest = &rest[1..];
     }
@@ -163,14 +201,23 @@ fn literal_default(t: &Tokens<'_>) -> bool {
         return false;
     }
     rest = &rest[1..];
+    if first.kind == Kind::String && starts(rest, &[":", ":"]) {
+        if !default_column_type(&t[..i], "jsonb") {
+            return false;
+        }
+        return builtin_type(&rest[2..], "jsonb").is_some_and(|n| default_suffix(&rest[2 + n..]));
+    }
     if first.kind == Kind::Number
         && starts(rest, &["."])
         && rest.get(1).is_some_and(|t| t.kind == Kind::Number)
     {
         rest = &rest[2..];
     }
-    // Deliberately conservative: casts, function calls and expressions need
-    // catalog volatility/rewriting evidence which a static check cannot know.
+    default_suffix(rest)
+}
+
+fn default_suffix(rest: &Tokens<'_>) -> bool {
+    // Other casts, function calls and expressions are deliberately refused.
     rest.is_empty()
         || [
             "not",
@@ -184,6 +231,33 @@ fn literal_default(t: &Tokens<'_>) -> bool {
         ]
         .iter()
         .any(|w| starts(rest, &[*w]))
+}
+
+pub(super) fn transaction(t: &Tokens<'_>) -> bool {
+    [
+        "begin",
+        "start",
+        "commit",
+        "end",
+        "rollback",
+        "abort",
+        "savepoint",
+        "release",
+        "prepare",
+    ]
+    .iter()
+    .any(|w| starts(t, &[w]))
+}
+
+fn enum_append(t: &Tokens<'_>) -> bool {
+    let Some((_, rest)) = starts(t, &["alter", "type"])
+        .then(|| object(&t[2..]))
+        .flatten()
+    else {
+        return false;
+    };
+    starts(rest, &["add", "value"])
+        && matches!(skip(&rest[2..], &["if", "not", "exists"]), [label] if label.kind == Kind::String)
 }
 
 fn allow_destructive<'a>(s: &Statement<'a>) -> Option<&'a str> {
@@ -214,6 +288,15 @@ pub(super) fn check(m: &Migration) -> Checked<'_> {
         Ok(s) => s,
         Err(line) => {
             emit(&mut out, m, line, LEX);
+            // A legacy lint review can pin a lexical error for import only.
+            // Do not let the aborted scan hide a visible ledger reference.
+            for (n, text) in m.sql.lines().enumerate() {
+                let lower = text.to_ascii_lowercase();
+                if LEDGER_NAMES.iter().any(|name| lower.contains(name)) {
+                    emit(&mut out, m, n + 1, RESERVED);
+                }
+            }
+            out.diagnostics.sort_by_key(|d| (d.line, d.rule_id));
             return out;
         }
     };
@@ -225,12 +308,10 @@ pub(super) fn check(m: &Migration) -> Checked<'_> {
         let mut rules = Vec::new();
         let mut destructive = false;
         let word = |w| starts(t, &[w]);
-        if t.iter().filter_map(Token::ident).any(|i| {
-            matches!(
-                i.as_str(),
-                "_sylphx_migrations" | "_sqlx_migrations" | "atlas_schema_revisions"
-            )
-        }) {
+        if t.iter()
+            .filter_map(Token::ident)
+            .any(|i| LEDGER_NAMES.contains(&i.as_str()))
+        {
             rules.push(RESERVED);
         }
         let create_index = word("create")
@@ -335,7 +416,7 @@ pub(super) fn check(m: &Migration) -> Checked<'_> {
                             }
                         } else if starts(a, &["add"]) {
                             if (has(a, &["not", "null"]) || has(a, &["default"]))
-                                && !literal_default(a)
+                                && !fast_default(a)
                                 && !fresh.contains(&table)
                             {
                                 rules.push(ADD_NOT_NULL);
@@ -391,21 +472,10 @@ pub(super) fn check(m: &Migration) -> Checked<'_> {
             }
         } else if starts(t, &["drop", "table"]) || word("truncate") {
             destructive = true;
-        } else if [
-            "begin",
-            "start",
-            "commit",
-            "end",
-            "rollback",
-            "abort",
-            "savepoint",
-            "release",
-            "prepare",
-        ]
-        .iter()
-        .any(|w| word(w))
-        {
+        } else if transaction(t) {
             rules.push(TRANSACTION);
+        } else if enum_append(t) {
+            // Extends a catalog enum; no table rewrite or row scan.
         } else if ![
             &["create", "schema"][..],
             &["create", "type"],
@@ -444,9 +514,33 @@ pub(super) fn check(m: &Migration) -> Checked<'_> {
         }
     }
     out.diagnostics.sort_by_key(|d| (d.line, d.rule_id));
-    if m.legacy_lint_reviewed {
-        // The exact source and complete findings have already been checked.
-        out.diagnostics.clear();
+    out
+}
+
+/// Apply the previously verified source-specific review. Unsupported replay
+/// boundaries may be pinned for history adoption, never for pending execution.
+pub(super) fn admitted(m: &Migration, pending: bool) -> Checked<'_> {
+    let mut out = check(m);
+    if m.legacy != Legacy::Strict {
+        out.diagnostics.retain(|d| {
+            d.rule_id == RESERVED.0
+                || (pending
+                    && m.legacy == Legacy::ImportOnly
+                    && matches!(d.rule_id, "MIG001" | "MIG107" | "MIG108"))
+        });
+    }
+    if let Some(reason) = m.legacy_destructive_reason.as_deref() {
+        out.overrides.push(reason);
+    }
+    if m.legacy == Legacy::Envelope {
+        // The baseline verified literal BEGIN and COMMIT at these positions;
+        // the engine transaction replaces both, including the final receipt.
+        out.spans.remove(0);
+        out.spans.pop();
     }
     out
 }
+
+#[cfg(test)]
+#[path = "lint_tests.rs"]
+mod tests;

@@ -7,6 +7,7 @@ use sqlx::{
 };
 
 use super::{
+    baseline::Legacy,
     history::{self, Recorded, Report, Source},
     lint::{self, Diagnostic},
     valid_id, Files, Migration, ReleaseTarget, Result, SourceTree,
@@ -212,7 +213,7 @@ async fn apply_locked<'a>(
         .values()
         .filter(|m| report.pending.iter().any(|p| p.file == m.file))
     {
-        let mut checked = lint::check(m);
+        let mut checked = lint::admitted(m, true);
         diagnostics.append(&mut checked.diagnostics);
         pending.push((m, checked));
     }
@@ -246,9 +247,33 @@ async fn apply_locked<'a>(
             // Write durable intent *first*, fail closed on ambiguous outcomes,
             // and never auto-retry a potentially invalid/partially built index.
             record(&mut *db, m, Source::Sylphx, false, &checked.overrides).await?;
-            for span in checked.spans {
-                execute(&mut *db, m, &m.sql[span]).await?;
+            let previous: Option<String> = if m.legacy == Legacy::Concurrent {
+                Some(
+                    sqlx::query_scalar("SHOW lock_timeout")
+                        .fetch_one(&mut *db)
+                        .await
+                        .map_err(|_| "cannot read migration session lock_timeout")?,
+                )
+            } else {
+                None
+            };
+            let replay = async {
+                for span in checked.spans {
+                    execute(&mut *db, m, &m.sql[span]).await?;
+                }
+                Ok::<(), String>(())
             }
+            .await;
+            if let Some(timeout) = previous {
+                // Some legacy files omit RESET (and RESET itself does not
+                // restore our runner setting). Do not leak timeouts forward.
+                sqlx::query("SELECT pg_catalog.set_config('lock_timeout', $1, false)")
+                    .bind(timeout)
+                    .execute(&mut *db)
+                    .await
+                    .map_err(|_| "cannot restore migration session lock_timeout")?;
+            }
+            replay?;
             let updated = sqlx::query(
                 "UPDATE public._sylphx_migrations SET finished_at = clock_timestamp()
                                        WHERE id = $1 AND sha256 = $2 AND finished_at IS NULL",

@@ -36,7 +36,7 @@ pub(crate) fn command() -> Command {
                 .global(true)
                 .value_parser(value_parser!(PathBuf))
                 .value_name("PATH")
-                .help("Validate a checksum-pinned baseline for reviewed legacy lint findings"),
+                .help("Validate reviewed legacy findings and replay options pinned to whole-file SHA-256"),
         )
         .subcommands([
             Command::new("plan")
@@ -178,3 +178,6 @@ pub(crate) async fn run(args: &ArgMatches) -> std::result::Result<(), Failure> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

@@ -107,15 +107,20 @@ pub(super) fn scan(sql: &str) -> Result<Vec<Statement<'_>>, usize> {
                 line += bytes[start..i].iter().filter(|&&b| b == b'\n').count();
                 continue;
             }
-            // Unicode-escaped identifiers require decoding (and may include
-            // a custom UESCAPE clause). Do not guess object identity.
-            b'U' | b'u' if matches!(bytes.get(i..i + 2), Some(b"&\"" | b"&'")) => return Err(line),
+            // Do not guess the identity of a Unicode-escaped identifier.
+            b'U' | b'u' if bytes.get(i..i + 2) == Some(b"&\"") => return Err(line),
             0 => return Err(line),
             _ => {}
         }
         let escaped = matches!(b, b'e' | b'E') && bytes.get(i) == Some(&b'\'');
-        let kind = if matches!(b, b'\'' | b'"') || escaped {
-            let quote = if escaped {
+        // Like standard strings, Unicode strings use doubled quotes, not
+        // a backslash to escape a quote. PostgreSQL decodes the contents.
+        let unicode = matches!(b, b'u' | b'U') && bytes.get(i..i + 2) == Some(b"&'");
+        let kind = if matches!(b, b'\'' | b'"') || escaped || unicode {
+            let quote = if unicode {
+                i += 2;
+                b'\''
+            } else if escaped {
                 i += 1;
                 b'\''
             } else {

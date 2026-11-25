@@ -29,7 +29,8 @@ struct Migration {
     file: String,
     sql: String,
     sha256: String,
-    legacy_lint_reviewed: bool,
+    legacy: baseline::Legacy,
+    legacy_destructive_reason: Option<String>,
 }
 
 fn valid_id(raw: &str) -> Option<i64> {
@@ -93,7 +94,8 @@ impl SourceTree {
                         file,
                         sql,
                         sha256,
-                        legacy_lint_reviewed: false,
+                        legacy: baseline::Legacy::Strict,
+                        legacy_destructive_reason: None,
                     },
                 )
                 .is_some()
@@ -114,7 +116,7 @@ impl SourceTree {
     pub fn lint(&self) -> Vec<Diagnostic<'_>> {
         self.files
             .values()
-            .flat_map(|file| lint::check(file).diagnostics)
+            .flat_map(|file| lint::admitted(file, false).diagnostics)
             .collect()
     }
 
