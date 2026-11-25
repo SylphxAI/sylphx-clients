@@ -227,6 +227,7 @@ export const PREFIXES = [
 	{ prefix: 'isms', entity: 'InboundSms', service: 'notify', collection: 'inbound_sms' },
 	{ prefix: 'pnum', entity: 'PhoneNumber', service: 'notify', collection: 'phone_numbers' },
 	{ prefix: 'upt', entity: 'UptimeCheck', service: 'observability', collection: 'uptime_checks' },
+	{ prefix: 'dprot', entity: 'DeploymentProtection', service: 'hosting', collection: 'deployment_protections' },
 	{ prefix: 'svrt', entity: 'ServingRoute', service: 'hosting', collection: 'serving_routes' },
 	{ prefix: 'svob', entity: 'ServiceObservation', service: 'hosting', collection: 'service_observations' },
 	{ prefix: 'upsrc', entity: 'UptimeSource', service: 'observability', collection: 'uptime_sources' },

@@ -73915,6 +73915,134 @@
       "package": "sylphx.hosting.v1"
     },
     {
+      "doc": "The Hosting policy singleton for an environment. This describes desired\nstate, not whether ingress is enforcing it.",
+      "fields": [
+        {
+          "behaviors": [
+            "IDENTIFIER"
+          ],
+          "cli_flag": "",
+          "doc": "The environment's deployment_protections/default.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Stable identity for the environment lifetime.",
+          "filterable": false,
+          "name": "uid",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Policy generation and ETag.",
+          "filterable": false,
+          "name": "meta",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.common.v1.ResourceMeta"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The default mode resolves to org_member in previews and public elsewhere.\nExplicit public or org_member overrides that default.",
+          "filterable": false,
+          "name": "mode",
+          "number": 10,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The resolved Hosting policy.",
+          "filterable": false,
+          "name": "protection",
+          "number": 11,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.hosting.v1.ServingRouteProtection"
+          }
+        }
+      ],
+      "name": "sylphx.hosting.v1.DeploymentProtection",
+      "package": "sylphx.hosting.v1"
+    },
+    {
+      "doc": "The request of GetDeploymentProtection.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The name of the environment's deployment_protections/default resource.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "hosting.sylphx.com/DeploymentProtection",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.hosting.v1.GetDeploymentProtectionRequest",
+      "package": "sylphx.hosting.v1"
+    },
+    {
       "doc": "The request of GetPreview.",
       "fields": [
         {
@@ -76922,6 +77050,25 @@
             "kind": "scalar",
             "scalar": "bool"
           }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Effective Hosting policy, not evidence of ingress enforcement. An\nauthorization consumer must never interpret missing or stale policy as public.",
+          "filterable": false,
+          "name": "protection",
+          "number": 14,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.hosting.v1.ServingRouteProtection"
+          }
         }
       ],
       "name": "sylphx.hosting.v1.ServingRoute",
@@ -77041,6 +77188,51 @@
         }
       ],
       "name": "sylphx.hosting.v1.ServingRouteMatch",
+      "package": "sylphx.hosting.v1"
+    },
+    {
+      "doc": "Effective route policy. Credentials and verifier URLs are never projected.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Explicit public or org_member. For org_member, ingress must add\nX-Robots-Tag: noindex, nofollow and disable shared caching.",
+          "filterable": false,
+          "name": "mode",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Exact Access org ID. Required for org_member; unset for public.",
+          "filterable": false,
+          "name": "org_id",
+          "number": 2,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.hosting.v1.ServingRouteProtection",
       "package": "sylphx.hosting.v1"
     },
     {
@@ -77439,6 +77631,51 @@
         }
       ],
       "name": "sylphx.hosting.v1.SourceLinkStatus",
+      "package": "sylphx.hosting.v1"
+    },
+    {
+      "doc": "The request of UpdateDeploymentProtection.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The policy to update. Name identifies it; mode must be explicitly set.",
+          "filterable": false,
+          "name": "deployment_protection",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.hosting.v1.DeploymentProtection"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Unset or mode updates mode. No other fields are writable.",
+          "filterable": false,
+          "name": "update_mask",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "field_mask"
+          }
+        }
+      ],
+      "name": "sylphx.hosting.v1.UpdateDeploymentProtectionRequest",
       "package": "sylphx.hosting.v1"
     },
     {
@@ -155638,6 +155875,28 @@
       "type": "events.sylphx.com/WebhookEndpoint"
     },
     {
+      "collection": "deployment_protections",
+      "controller": "",
+      "deletion_protection": false,
+      "fail_mode": "closed",
+      "in_snapshot": false,
+      "kind": "DeploymentProtection",
+      "message": "sylphx.hosting.v1.DeploymentProtection",
+      "meters": [],
+      "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+      "pattern": "orgs/{org}/projects/{project}/envs/{env}/deployment_protections/{deployment_protection}",
+      "plural": "deploymentProtections",
+      "priority_chunk": false,
+      "reconciled": false,
+      "service": "hosting",
+      "shape": "singleton",
+      "singular": "deploymentProtection",
+      "stale_bound": null,
+      "storage": "service",
+      "terraform": false,
+      "type": "hosting.sylphx.com/DeploymentProtection"
+    },
+    {
       "collection": "previews",
       "controller": "services/hosting/controller",
       "deletion_protection": false,
@@ -175790,6 +176049,99 @@
           ],
           "name": "uptime_manifests",
           "resource_type": "hosting.sylphx.com/UptimeManifest"
+        },
+        {
+          "methods": [
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Reads the environment's desired policy (deployment_protections/default).",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "INVALID_FIELD",
+                "INVALID_STATE"
+              ],
+              "http": {
+                "body": null,
+                "method": "GET",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/deployment_protections/{deployment_protection}",
+                    "pattern": "orgs/*/projects/*/envs/*/deployment_protections/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/projects/*/envs/*/deployment_protections/*}"
+              },
+              "id": "hosting.deployment_protections.get",
+              "kind": "get",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "hosting:read",
+              "proto": "sylphx.hosting.v1.HostingService.GetDeploymentProtection",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.hosting.v1.GetDeploymentProtectionRequest",
+              "resource_field": null,
+              "response": "sylphx.hosting.v1.DeploymentProtection",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "get"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Updates the environment's desired Deployment Protection policy.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "INVALID_FIELD",
+                "INVALID_STATE",
+                "ETAG_MISMATCH",
+                "IDEMPOTENCY_KEY_REUSED",
+                "IDEMPOTENCY_IN_PROGRESS"
+              ],
+              "http": {
+                "body": "deployment_protection",
+                "method": "PATCH",
+                "path_params": [
+                  {
+                    "field": "deployment_protection.name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/deployment_protections/{deployment_protection}",
+                    "pattern": "orgs/*/projects/*/envs/*/deployment_protections/*"
+                  }
+                ],
+                "query_params": [
+                  "update_mask"
+                ],
+                "template": "/v1/{deployment_protection.name=orgs/*/projects/*/envs/*/deployment_protections/*}"
+              },
+              "id": "hosting.deployment_protections.update",
+              "kind": "update",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "hosting:write",
+              "proto": "sylphx.hosting.v1.HostingService.UpdateDeploymentProtection",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.hosting.v1.UpdateDeploymentProtectionRequest",
+              "resource_field": "deployment_protection",
+              "response": "sylphx.hosting.v1.DeploymentProtection",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "update"
+            }
+          ],
+          "name": "deployment_protections",
+          "resource_type": "hosting.sylphx.com/DeploymentProtection"
         },
         {
           "methods": [

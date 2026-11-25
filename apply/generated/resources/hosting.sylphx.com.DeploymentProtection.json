@@ -1,0 +1,22 @@
+{
+  "collection": "deployment_protections",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "closed",
+  "in_snapshot": false,
+  "kind": "DeploymentProtection",
+  "message": "sylphx.hosting.v1.DeploymentProtection",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/deployment_protections/{deployment_protection}",
+  "plural": "deploymentProtections",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "hosting",
+  "shape": "singleton",
+  "singular": "deploymentProtection",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "hosting.sylphx.com/DeploymentProtection"
+}

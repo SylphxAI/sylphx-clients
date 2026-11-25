@@ -16129,6 +16129,73 @@
           "resource_type": "hosting.sylphx.com/UptimeManifest"
         },
         {
+          "collection": "deployment_protections",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/deployment_protections/*}",
+              "method": "hosting.deployment_protections.get",
+              "permission": "hosting:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/deployment_protections/{deployment_protection}"
+              },
+              "summary": "Reads the environment's desired policy (deployment_protections/default).",
+              "verb": "get"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "deployment_protection.meta.labels",
+                  "flag": "--meta.labels",
+                  "repeated": true,
+                  "summary": "Caller-writable, indexed labels (AIP-122 label rules).",
+                  "type": "key=value"
+                },
+                {
+                  "field": "deployment_protection.meta.annotations",
+                  "flag": "--meta.annotations",
+                  "repeated": true,
+                  "summary": "Caller-writable, unindexed annotations.",
+                  "type": "key=value"
+                },
+                {
+                  "field": "deployment_protection.meta.display_name",
+                  "flag": "--meta.display-name",
+                  "summary": "Caller-writable human-readable name.",
+                  "type": "string"
+                },
+                {
+                  "field": "deployment_protection.mode",
+                  "flag": "--mode",
+                  "summary": "The default mode resolves to org_member in previews and public elsewhere. Explicit public or org_member overrides that default.",
+                  "type": "string"
+                }
+              ],
+              "http": "PATCH /v1/{deployment_protection.name=orgs/*/projects/*/envs/*/deployment_protections/*}",
+              "method": "hosting.deployment_protections.update",
+              "permission": "hosting:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "deployment_protection.name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/deployment_protections/{deployment_protection}"
+              },
+              "resource_field": "deployment_protection",
+              "sends_etag": true,
+              "summary": "Updates the environment's desired Deployment Protection policy.",
+              "update_mask": "from-flags",
+              "verb": "update"
+            }
+          ],
+          "noun": "deployment-protections",
+          "resource_type": "hosting.sylphx.com/DeploymentProtection"
+        },
+        {
           "collection": "serving_routes",
           "commands": [
             {

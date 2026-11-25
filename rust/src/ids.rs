@@ -739,6 +739,13 @@ pub const ISMS: Prefix = Prefix::new("isms", "InboundSms", "notify", Some("inbou
 pub const PNUM: Prefix = Prefix::new("pnum", "PhoneNumber", "notify", Some("phone_numbers"));
 /// UptimeCheck (`upt`, observability).
 pub const UPT: Prefix = Prefix::new("upt", "UptimeCheck", "observability", Some("uptime_checks"));
+/// DeploymentProtection (`dprot`, hosting).
+pub const DPROT: Prefix = Prefix::new(
+    "dprot",
+    "DeploymentProtection",
+    "hosting",
+    Some("deployment_protections"),
+);
 /// ServingRoute (`svrt`, hosting).
 pub const SVRT: Prefix = Prefix::new("svrt", "ServingRoute", "hosting", Some("serving_routes"));
 /// ServiceObservation (`svob`, hosting).
@@ -810,6 +817,6 @@ pub const ALL: &[Prefix] = &[
     EXP, NTF, DISP, TDEF, ALRT, DOC, FILE, PSEG, PCAM, PDLY, FVER, ACHV, LDB, COH, ADST, DLG, REF,
     PROMO, NSUB, NSEQ, NST, IDP, SLOG, CFG, BND, AUDT, PERM, ROLE, SA, REQ, CAT, CKS, TCLK, CPL,
     CSUB, EGNT, LKEY, LTOK, RVS, RVF, RVSUM, FXR, MACT, PSN, SCN, SPU, SCR, SCC, URES, UEVT, CGRT,
-    UINV, USET, UTIER, UMTR, UMPR, SPC, EPI, KEN, KREL, KSCH, SNUM, ISMS, PNUM, UPT, SVRT, SVOB,
-    UPSRC, UPMF, PEV, CHP, CHR, BTA, BRC, SINB, SCAS, SMSG, SACT, SAUD, SREC, INMSG,
+    UINV, USET, UTIER, UMTR, UMPR, SPC, EPI, KEN, KREL, KSCH, SNUM, ISMS, PNUM, UPT, DPROT, SVRT,
+    SVOB, UPSRC, UPMF, PEV, CHP, CHR, BTA, BRC, SINB, SCAS, SMSG, SACT, SAUD, SREC, INMSG,
 ];

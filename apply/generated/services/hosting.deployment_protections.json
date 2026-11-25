@@ -1,0 +1,25 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "hosting.deployment_protections.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask"
+            ]
+          },
+          "id": "hosting.deployment_protections.update",
+          "kind": "update"
+        }
+      ],
+      "resource_type": "hosting.sylphx.com/DeploymentProtection"
+    }
+  ]
+}

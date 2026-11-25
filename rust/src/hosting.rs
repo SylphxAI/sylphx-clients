@@ -203,6 +203,46 @@ pub struct DeleteSourceLinkRequest {
     pub validate_only: bool,
 }
 
+/// The Hosting policy singleton for an environment. This describes desired
+/// state, not whether ingress is enforcing it.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct DeploymentProtection {
+    /// The environment's deployment_protections/default.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Stable identity for the environment lifetime.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Policy generation and ETag.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// The default mode resolves to org_member in previews and public elsewhere.
+    /// Explicit public or org_member overrides that default.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub mode: String,
+    /// The resolved Hosting policy.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub protection: Option<ServingRouteProtection>,
+}
+
+/// The request of GetDeploymentProtection.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetDeploymentProtectionRequest {
+    /// The name of the environment's deployment_protections/default resource.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
 /// The request of GetPreview.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -1232,6 +1272,12 @@ pub struct ServingRoute {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub observed: bool,
+    /// Effective Hosting policy, not evidence of ingress enforcement. An
+    /// authorization consumer must never interpret missing or stale policy as public.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub protection: Option<ServingRouteProtection>,
 }
 
 /// Backend selection facts; source expectation is independently Release-owned.
@@ -1271,6 +1317,23 @@ pub struct ServingRouteMatch {
         alias = "requiresRequestContext"
     )]
     pub requires_request_context: bool,
+}
+
+/// Effective route policy. Credentials and verifier URLs are never projected.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ServingRouteProtection {
+    /// Explicit public or org_member. For org_member, ingress must add
+    /// X-Robots-Tag: noindex, nofollow and disable shared caching.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub mode: String,
+    /// Exact Access org ID. Required for org_member; unset for public.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "orgId")]
+    pub org_id: Option<String>,
 }
 
 /// A route rule's safe probe matches and independent current Release policy.
@@ -1418,6 +1481,28 @@ pub struct SourceLinkStatus {
         alias = "lastDeliveryTime"
     )]
     pub last_delivery_time: String,
+}
+
+/// The request of UpdateDeploymentProtection.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct UpdateDeploymentProtectionRequest {
+    /// The policy to update. Name identifies it; mode must be explicitly set.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "deploymentProtection"
+    )]
+    pub deployment_protection: Option<DeploymentProtection>,
+    /// Unset or mode updates mode. No other fields are writable.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "updateMask"
+    )]
+    pub update_mask: String,
 }
 
 /// The request of UpdateSourceLink.
@@ -1901,6 +1986,13 @@ impl<'a, T: crate::runtime::Transport> HostingApi<'a, T> {
         }
     }
 
+    /// The `deployment_protections` collection.
+    pub fn deployment_protections(&self) -> DeploymentProtectionsCollection<'a, T> {
+        DeploymentProtectionsCollection {
+            client: self.client,
+        }
+    }
+
     /// The `serving_routes` collection.
     pub fn serving_routes(&self) -> ServingRoutesCollection<'a, T> {
         ServingRoutesCollection {
@@ -1975,6 +2067,78 @@ impl<'a, T: crate::runtime::Transport> UptimeManifestsCollection<'a, T> {
             query: query.0,
             body: None,
             mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `deployment_protections` of Sylphx Hosting: Resource type `hosting.sylphx.com/DeploymentProtection`.
+pub struct DeploymentProtectionsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> DeploymentProtectionsCollection<'a, T> {
+    /// Reads the environment's desired policy (deployment_protections/default).
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/deployment_protections/*}` · permission `hosting:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+    pub async fn get(
+        &self,
+        request: GetDeploymentProtectionRequest,
+    ) -> Result<DeploymentProtection, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/deployment_protections/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Updates the environment's desired Deployment Protection policy.
+    ///
+    /// `PATCH /v1/{deployment_protection.name=orgs/*/projects/*/envs/*/deployment_protections/*}` · permission `hosting:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn update(
+        &self,
+        request: UpdateDeploymentProtectionRequest,
+    ) -> Result<DeploymentProtection, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                request
+                    .deployment_protection
+                    .as_ref()
+                    .map(|v| v.name.as_str())
+                    .unwrap_or(""),
+                "orgs/*/projects/*/envs/*/deployment_protections/*",
+                "deployment_protection.name"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("update_mask", &request.update_mask);
+        let http = crate::runtime::HttpRequest {
+            method: "PATCH",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.deployment_protection)?),
+            mutation: true,
             origin: None,
             effect_ids: false,
         };

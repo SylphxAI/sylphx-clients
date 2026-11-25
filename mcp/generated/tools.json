@@ -22758,6 +22758,107 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
+        "title": "Reads the environment's desired policy (deployment_protections/default)."
+      },
+      "description": "Reads the environment's desired policy (deployment_protections/default).",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/deployment_protections/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetDeploymentProtection.",
+        "properties": {
+          "name": {
+            "description": "The name of the environment's deployment_protections/default resource.",
+            "type": "string",
+            "x-sylphx-resource-reference": "hosting.sylphx.com/DeploymentProtection"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "hosting.deployment_protections.get",
+      "permission": "hosting:read",
+      "tool": "hosting_deployment_protections_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates the environment's desired Deployment Protection policy."
+      },
+      "description": "Updates the environment's desired Deployment Protection policy.",
+      "effect": "write",
+      "http": "PATCH /v1/{deployment_protection.name=orgs/*/projects/*/envs/*/deployment_protections/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateDeploymentProtection.",
+        "properties": {
+          "deployment_protection": {
+            "additionalProperties": false,
+            "description": "The policy to update. Name identifies it; mode must be explicitly set.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Policy generation and ETag.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "mode": {
+                "description": "The default mode resolves to org_member in previews and public elsewhere.\nExplicit public or org_member overrides that default.",
+                "type": "string"
+              },
+              "name": {
+                "description": "The environment's deployment_protections/default.",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "Unset or mode updates mode. No other fields are writable.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "deployment_protection"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "hosting.deployment_protections.update",
+      "permission": "hosting:write",
+      "tool": "hosting_deployment_protections_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
         "title": "Gets an authorized public route observation."
       },
       "description": "Gets an authorized public route observation.",

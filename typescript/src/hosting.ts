@@ -95,6 +95,32 @@ export interface DeleteSourceLinkRequest {
 	validateOnly?: boolean
 }
 
+/**
+ * The Hosting policy singleton for an environment. This describes desired
+ * state, not whether ingress is enforcing it.
+ */
+export interface DeploymentProtection {
+	/** The environment's deployment_protections/default. */
+	name?: string
+	/** Stable identity for the environment lifetime. */
+	readonly uid?: string
+	/** Policy generation and ETag. */
+	meta?: common.ResourceMeta
+	/**
+	 * The default mode resolves to org_member in previews and public elsewhere.
+	 * Explicit public or org_member overrides that default.
+	 */
+	mode?: string
+	/** The resolved Hosting policy. */
+	readonly protection?: ServingRouteProtection
+}
+
+/** The request of GetDeploymentProtection. */
+export interface GetDeploymentProtectionRequest {
+	/** The name of the environment's deployment_protections/default resource. */
+	name: string
+}
+
 /** The request of GetPreview. */
 export interface GetPreviewRequest {
 	/** The name of the preview to get. */
@@ -585,6 +611,11 @@ export interface ServingRoute {
 	readonly rules?: ServingRouteRule[]
 	/** True only when the owner has observed the current route generation. */
 	readonly observed?: boolean
+	/**
+	 * Effective Hosting policy, not evidence of ingress enforcement. An
+	 * authorization consumer must never interpret missing or stale policy as public.
+	 */
+	readonly protection?: ServingRouteProtection
 }
 
 /** Backend selection facts; source expectation is independently Release-owned. */
@@ -608,6 +639,17 @@ export interface ServingRouteMatch {
 	method?: string
 	/** True when headers/query or unknown match extensions need caller input. */
 	requiresRequestContext?: boolean
+}
+
+/** Effective route policy. Credentials and verifier URLs are never projected. */
+export interface ServingRouteProtection {
+	/**
+	 * Explicit public or org_member. For org_member, ingress must add
+	 * X-Robots-Tag: noindex, nofollow and disable shared caching.
+	 */
+	readonly mode?: string
+	/** Exact Access org ID. Required for org_member; unset for public. */
+	readonly orgId?: string
 }
 
 /** A route rule's safe probe matches and independent current Release policy. */
@@ -674,6 +716,14 @@ export interface SourceLinkStatus {
 	readonly headCommit?: string
 	/** When the inbox or reconciler last recorded a change. */
 	readonly lastDeliveryTime?: string
+}
+
+/** The request of UpdateDeploymentProtection. */
+export interface UpdateDeploymentProtectionRequest {
+	/** The policy to update. Name identifies it; mode must be explicitly set. */
+	deploymentProtection: DeploymentProtection
+	/** Unset or mode updates mode. No other fields are writable. */
+	updateMask?: string
 }
 
 /** The request of UpdateSourceLink. */
@@ -763,6 +813,11 @@ runtime.registerSchemas({
 		['allowMissing', 'allow_missing'],
 		['validateOnly', 'validate_only'],
 	],
+	'sylphx.hosting.v1.DeploymentProtection': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['protection', 'protection', 'sylphx.hosting.v1.ServingRouteProtection'],
+	],
+	'sylphx.hosting.v1.GetDeploymentProtectionRequest': [],
 	'sylphx.hosting.v1.GetPreviewRequest': [],
 	'sylphx.hosting.v1.GetRolloutRequest': [],
 	'sylphx.hosting.v1.GetServiceObservationRequest': [],
@@ -903,11 +958,15 @@ runtime.registerSchemas({
 	'sylphx.hosting.v1.ServingRoute': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['rules', 'rules', 'sylphx.hosting.v1.ServingRouteRule'],
+		['protection', 'protection', 'sylphx.hosting.v1.ServingRouteProtection'],
 	],
 	'sylphx.hosting.v1.ServingRouteBackend': [],
 	'sylphx.hosting.v1.ServingRouteMatch': [
 		['pathType', 'path_type'],
 		['requiresRequestContext', 'requires_request_context'],
+	],
+	'sylphx.hosting.v1.ServingRouteProtection': [
+		['orgId', 'org_id'],
 	],
 	'sylphx.hosting.v1.ServingRouteRule': [
 		['matches', 'matches', 'sylphx.hosting.v1.ServingRouteMatch'],
@@ -931,6 +990,10 @@ runtime.registerSchemas({
 		['defaultBranch', 'default_branch'],
 		['headCommit', 'head_commit'],
 		['lastDeliveryTime', 'last_delivery_time'],
+	],
+	'sylphx.hosting.v1.UpdateDeploymentProtectionRequest': [
+		['deploymentProtection', 'deployment_protection', 'sylphx.hosting.v1.DeploymentProtection'],
+		['updateMask', 'update_mask'],
 	],
 	'sylphx.hosting.v1.UpdateSourceLinkRequest': [
 		['sourceLink', 'source_link', 'sylphx.hosting.v1.SourceLink'],
@@ -957,6 +1020,8 @@ runtime.registerSchemas({
 export class HostingApi {
 	/** The `uptime_manifests` collection. */
 	readonly uptimeManifests: UptimeManifestsCollection
+	/** The `deployment_protections` collection. */
+	readonly deploymentProtections: DeploymentProtectionsCollection
 	/** The `serving_routes` collection. */
 	readonly servingRoutes: ServingRoutesCollection
 	/** The `service_observations` collection. */
@@ -972,6 +1037,7 @@ export class HostingApi {
 
 	constructor(client: runtime.Client) {
 		this.uptimeManifests = new UptimeManifestsCollection(client)
+		this.deploymentProtections = new DeploymentProtectionsCollection(client)
 		this.servingRoutes = new ServingRoutesCollection(client)
 		this.serviceObservations = new ServiceObservationsCollection(client)
 		this.services = new ServicesCollection(client)
@@ -1003,6 +1069,50 @@ export class UptimeManifestsCollection {
 			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/uptime_manifests/*', 'name')}`,
 			responseType: 'sylphx.hosting.v1.UptimeManifest',
 			mutation: false,
+		})
+	}
+}
+
+/** `deployment_protections` of Sylphx Hosting: Resource type `hosting.sylphx.com/DeploymentProtection`. */
+export class DeploymentProtectionsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Reads the environment's desired policy (deployment_protections/default).
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/deployment_protections/*}` · permission `hosting:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+	 */
+	async get(request: GetDeploymentProtectionRequest): Promise<DeploymentProtection> {
+		return this.client.call<DeploymentProtection>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/deployment_protections/*', 'name')}`,
+			responseType: 'sylphx.hosting.v1.DeploymentProtection',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Updates the environment's desired Deployment Protection policy.
+	 *
+	 * `PATCH /v1/{deployment_protection.name=orgs/*\/projects/*\/envs/*\/deployment_protections/*}` · permission `hosting:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async update(request: UpdateDeploymentProtectionRequest): Promise<DeploymentProtection> {
+		return this.client.call<DeploymentProtection>({
+			method: 'PATCH',
+			path: `/v1/${runtime.pathParam(request.deploymentProtection?.name, 'orgs/*/projects/*/envs/*/deployment_protections/*', 'deployment_protection.name')}`,
+			query: { update_mask: request.updateMask },
+			body: request.deploymentProtection ?? {},
+			bodyType: 'sylphx.hosting.v1.DeploymentProtection',
+			responseType: 'sylphx.hosting.v1.DeploymentProtection',
+			mutation: true,
 		})
 	}
 }
