@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, mock, test } from 'bun:test'
+import { afterEach, describe, expect, jest, mock, test } from 'bun:test'
 import {
 	bindCheckoutAttribution,
 	createSignalBrowser,
@@ -501,13 +501,15 @@ const utms = {
 }
 const clicks = { gclid: 'GoogleClick', gbraid: 'Braid', wbraid: 'WebBraid', fbclid: 'MetaClick' }
 
-function ingestTransport(status = 202) {
+function ingestTransport(result: number | ((attempt: number) => Response) = 202) {
 	const calls: { url: string; init?: RequestInit }[] = []
 	const ingest: SignalIngestOptions = {
 		apiKey: key,
 		fetch: (async (url, init) => {
 			calls.push({ url: String(url), init })
-			return new Response(null, { status })
+			return typeof result === 'number'
+				? new Response(null, { status: result })
+				: result(calls.length)
 		}) as typeof fetch,
 	}
 	return {
@@ -901,14 +903,133 @@ test('ingest fails closed for absent configuration, unsafe endpoints and invalid
 	signal.dispose()
 })
 
-test('a transport failure is false and cannot cause a duplicate view attempt', async () => {
-	browser()
-	const { ingest, calls } = ingestTransport(503)
-	const signal = createSignalBrowser({ region: 'ROW', ingest })
-	expect(await signal.pageView()).toBe(false)
-	expect(await signal.pageView()).toBe(false)
-	expect(calls).toHaveLength(1)
-	signal.dispose()
+function unavailable(retryAfter?: string): Response {
+	return new Response(null, {
+		status: 503,
+		headers: retryAfter === undefined ? undefined : { 'Retry-After': retryAfter },
+	})
+}
+
+describe('Signal browser ingest retries', () => {
+	afterEach(() => {
+		jest.useRealTimers()
+	})
+
+	test('replays the exact request after Retry-After: 0, including the generated event ID', async () => {
+		browser()
+		const { ingest, calls, batches } = ingestTransport((attempt) =>
+			attempt === 1 ? unavailable('0') : new Response(null, { status: 202 }),
+		)
+		const signal = createSignalBrowser({ region: 'ROW', ingest })
+		expect(await signal.track({ eventName: 'visit' })).toBe(true)
+		expect(calls).toHaveLength(2)
+		expect(calls[1]).toEqual(calls[0])
+		expect(batches()[0].events[0].event_id).toEqual(expect.any(String))
+		signal.dispose()
+	})
+
+	test.each([
+		{ header: '2', delay: 2_000 },
+		{ header: undefined, delay: 5_000 },
+		{ header: '', delay: 5_000 },
+		{ header: '-1', delay: 5_000 },
+		{ header: '1.5', delay: 5_000 },
+		{ header: 'Wed, 25 Nov 2026 12:00:00 GMT', delay: 5_000 },
+		{ header: '99999999999999999999', delay: 10_000 },
+	])('waits $delay ms for Retry-After: $header', async ({ header, delay }) => {
+		browser()
+		jest.useFakeTimers()
+		const { ingest, calls } = ingestTransport((attempt) =>
+			attempt === 1 ? unavailable(header) : new Response(null, { status: 202 }),
+		)
+		const signal = createSignalBrowser({ region: 'ROW', ingest })
+		const sent = signal.track({ eventName: 'visit' })
+		await Promise.resolve() // Let the first response schedule the retry timer.
+		expect(jest.getTimerCount()).toBe(1)
+		jest.advanceTimersByTime(delay - 1)
+		await Promise.resolve()
+		expect(calls).toHaveLength(1)
+		expect(jest.getTimerCount()).toBe(1)
+		jest.advanceTimersByTime(1)
+		expect(jest.getTimerCount()).toBe(0)
+		expect(await sent).toBe(true)
+		expect(calls).toHaveLength(2)
+		signal.dispose()
+	})
+
+	test.each([
+		'denial',
+		'disposal',
+	] as const)('cancels pending retry timers on %s', async (action) => {
+		browser()
+		jest.useFakeTimers()
+		const { ingest, calls } = ingestTransport(() => unavailable('5'))
+		const signal = createSignalBrowser({ region: 'ROW', ingest })
+		const sent = [signal.track({ eventName: 'visit' }), signal.pageView()]
+		await Promise.resolve()
+		expect(jest.getTimerCount()).toBe(2)
+		if (action === 'denial') signal.setConsent('denied')
+		else signal.dispose()
+		// No clock advance: both calls must settle now and neither may send a retry.
+		expect(jest.getTimerCount()).toBe(0)
+		expect(await Promise.all(sent)).toEqual([false, false])
+		expect(calls).toHaveLength(2)
+		signal.dispose()
+	})
+
+	test.each([
+		'denied',
+		'analytics_only',
+		'gpc',
+	] as const)('rechecks %s before sending the retry', async (choice) => {
+		const { nav, values } = browser()
+		jest.useFakeTimers()
+		const { ingest, calls, batches } = ingestTransport(() => unavailable('5'))
+		const signal = createSignalBrowser({ region: 'ROW', ingest })
+		const sent = signal.track({ eventName: 'visit' })
+		await Promise.resolve()
+		expect(jest.getTimerCount()).toBe(1)
+		expect(batches()[0].events[0].properties).toMatchObject({ fbclid: 'Same.Click' })
+		// No storage event: the retry itself must read the persisted choice again.
+		if (choice === 'gpc') nav.globalPrivacyControl = true
+		else values.set(consentStorageSlot, choice)
+		jest.advanceTimersByTime(5_000)
+		expect(await sent).toBe(false)
+		expect(calls).toHaveLength(1)
+		if (choice !== 'analytics_only') expect(values.has(touchStorageSlot)).toBe(false)
+		signal.dispose()
+	})
+
+	test.each([400, 401, 403, 413, 415, 429])('does not retry HTTP %i', async (status) => {
+		browser()
+		const { ingest, calls } = ingestTransport(status)
+		const signal = createSignalBrowser({ region: 'ROW', ingest })
+		expect(await signal.track({ eventName: 'visit' })).toBe(false)
+		expect(calls).toHaveLength(1)
+		signal.dispose()
+	})
+
+	test('a network exception is false and cannot cause a duplicate view attempt', async () => {
+		browser()
+		const { ingest, calls } = ingestTransport(() => {
+			throw new TypeError('Network request failed')
+		})
+		const signal = createSignalBrowser({ region: 'ROW', ingest })
+		expect(await signal.pageView()).toBe(false)
+		expect(await signal.pageView()).toBe(false)
+		expect(calls).toHaveLength(1)
+		signal.dispose()
+	})
+
+	test('a second 503 ends the retry, without permitting a duplicate page view', async () => {
+		browser()
+		const { ingest, calls } = ingestTransport(() => unavailable('0'))
+		const signal = createSignalBrowser({ region: 'ROW', ingest })
+		expect(await signal.pageView()).toBe(false)
+		expect(await signal.pageView()).toBe(false)
+		expect(calls).toHaveLength(2)
+		signal.dispose()
+	})
 })
 
 test('rechecks consent after serializing caller properties and never sends after a GPC change', async () => {

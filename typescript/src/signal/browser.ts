@@ -93,6 +93,12 @@ function ingestEndpoint(ingest: SignalIngestOptions): string | undefined {
 	return undefined
 }
 
+function retryDelay(headers: Headers): number {
+	const value = headers.get('Retry-After')?.trim()
+	const seconds = value && /^[0-9]+$/.test(value) ? Math.min(Number(value), 10) : 5
+	return seconds * 1000
+}
+
 function allowsAds(consent: SignalConsent): boolean {
 	return consent.ad_storage === 'granted' && consent.ad_user_data === 'granted'
 }
@@ -128,6 +134,26 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 	let loaded = false
 	let disposed = false
 	let previous: SignalConsent | undefined
+	const pendingRetries = new Set<() => void>()
+
+	function cancelRetries() {
+		for (const cancel of pendingRetries) cancel()
+	}
+
+	function waitForRetry(delay: number): Promise<boolean> {
+		return new Promise((resolve) => {
+			const timer = setTimeout(() => {
+				pendingRetries.delete(cancel)
+				resolve(true)
+			}, delay)
+			const cancel = () => {
+				clearTimeout(timer)
+				pendingRetries.delete(cancel)
+				resolve(false)
+			}
+			pendingRetries.add(cancel)
+		})
+	}
 
 	function storedChoice(): SignalConsentChoice | undefined {
 		if (choiceOverride) return choiceOverride
@@ -141,6 +167,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 	}
 
 	function clearCollection() {
+		cancelRetries()
 		pendingTouch = undefined
 		pendingPath = undefined
 		viewed = undefined
@@ -263,6 +290,13 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 		return resolveEffectiveConsent(privacy).analytics_storage === 'granted'
 	}
 
+	function canSend(ads: boolean): boolean {
+		if (disposed) return false
+		privacy.storedChoice = storedChoice()
+		if (privacy.storedChoice === 'denied') clearCollection()
+		return canIngest() && (!ads || allowsAds(resolveEffectiveConsent(privacy)))
+	}
+
 	async function emit(
 		event: SignalEventInput,
 		attribution: SignalAttribution,
@@ -300,10 +334,8 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 				],
 			})
 			// Application getters/serializers can run synchronously before the send.
-			privacy.storedChoice = storedChoice()
-			if (privacy.storedChoice === 'denied') clearCollection()
-			if (!canIngest() || (ads && !allowsAds(resolveEffectiveConsent(privacy)))) return false
-			const response = await (ingest.fetch ?? fetch)(endpoint, {
+			if (!canSend(ads)) return false
+			const send = () => (ingest.fetch ?? fetch)(endpoint, {
 				method: 'POST',
 				keepalive: true,
 				credentials: 'omit',
@@ -312,7 +344,12 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 				headers: { 'X-Sylphx-Key': ingest.apiKey, 'Content-Type': 'application/json' },
 				body,
 			})
-			return response.ok
+			const response = await send()
+			if (response.status !== 503) return response.ok
+			if (!canSend(ads) || !(await waitForRetry(retryDelay(response.headers)))) return false
+			if (!canSend(ads)) return false
+			// Replay the same serialized body, including its event ID for server-side dedupe.
+			return (await send()).ok
 		} catch {
 			return false
 		}
@@ -424,6 +461,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 		},
 		dispose() {
 			disposed = true
+			cancelRetries()
 			pendingTouch = undefined
 			pendingPath = undefined
 			window.removeEventListener('storage', onStorage)
