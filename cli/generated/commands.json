@@ -7366,6 +7366,12 @@
                   "type": "bool"
                 },
                 {
+                  "field": "oauth_client.spec.access_token_format",
+                  "flag": "--spec.access-token-format",
+                  "summary": "Access token format for PKCE grants to resource_uri: opaque (default) or jwt.",
+                  "type": "string"
+                },
+                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -7488,6 +7494,12 @@
                   "flag": "--spec.backchannel-logout-session-required",
                   "summary": "Require a session ID in Logout Tokens. Auth always sends a session ID.",
                   "type": "bool"
+                },
+                {
+                  "field": "oauth_client.spec.access_token_format",
+                  "flag": "--spec.access-token-format",
+                  "summary": "Access token format for PKCE grants to resource_uri: opaque (default) or jwt.",
+                  "type": "string"
                 },
                 {
                   "field": "allow_missing",

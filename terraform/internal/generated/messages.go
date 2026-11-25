@@ -120,6 +120,7 @@ func authOauthClientSpec() []def.Field {
 		{Name: "resource_uri", Kind: def.String, Doc: "RFC 8707 protected-resource identifier served by this confidential client. An absolute HTTPS URI without credentials or a fragment. Unique among live clients of this environment. Clear with an explicit update mask."},
 		{Name: "backchannel_logout_uri", Kind: def.String, Doc: "Optional HTTPS endpoint for OpenID Connect Back-Channel Logout. Clear it with an explicit update mask."},
 		{Name: "backchannel_logout_session_required", Kind: def.Bool, Doc: "Require a session ID in Logout Tokens. Auth always sends a session ID."},
+		{Name: "access_token_format", Kind: def.String, Doc: "Access token format for PKCE grants to resource_uri: opaque (default) or jwt."},
 	}
 }
 

@@ -1163,6 +1163,8 @@ export interface OauthClientSpec {
 	backchannelLogoutUri?: string
 	/** Require a session ID in Logout Tokens. Auth always sends a session ID. */
 	backchannelLogoutSessionRequired?: boolean
+	/** Access token format for PKCE grants to resource_uri: opaque (default) or jwt. */
+	accessTokenFormat?: string
 }
 
 /** OauthClientStatus is the observed state of an OauthClient. */
@@ -2002,6 +2004,7 @@ runtime.registerSchemas({
 		['resourceUri', 'resource_uri'],
 		['backchannelLogoutUri', 'backchannel_logout_uri'],
 		['backchannelLogoutSessionRequired', 'backchannel_logout_session_required'],
+		['accessTokenFormat', 'access_token_format'],
 	],
 	'sylphx.auth.v1.OauthClientStatus': [
 		['observedGeneration', 'observed_generation'],

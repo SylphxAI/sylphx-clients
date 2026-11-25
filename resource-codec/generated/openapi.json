@@ -9643,6 +9643,10 @@
       "sylphx.auth.v1.OauthClientSpec": {
         "description": "OauthClientSpec is the caller-writable state of an OauthClient.",
         "properties": {
+          "access_token_format": {
+            "description": "Access token format for PKCE grants to resource_uri: opaque (default) or jwt.",
+            "type": "string"
+          },
           "access_token_ttl": {
             "description": "Access token lifetime; default 1h.",
             "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
