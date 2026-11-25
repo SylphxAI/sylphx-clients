@@ -188,10 +188,15 @@ export function SylphxSignIn(props: SylphxSignInProps) {
 			</button>
 		</Show>
 	)
+	// Solid SSR serializes a present style prop even when its value is undefined.
+	const panelStyle = () => {
+		const tokens = props.appearance?.tokens
+		return tokens && Object.values(tokens).some((value) => value != null) ? { style: tokens } : {}
+	}
 	return (
 		<section
+			{...panelStyle()}
 			class={className('panel')}
-			style={props.appearance?.tokens}
 			aria-labelledby={id('title')}
 			lang={language()}
 		>

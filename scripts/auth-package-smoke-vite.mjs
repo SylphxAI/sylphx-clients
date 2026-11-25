@@ -19,9 +19,9 @@ await build({
 		rollupOptions: { output: { entryFileNames: 'entry.mjs' } },
 	},
 })
-const { page } = await import(pathToFileURL(resolve('out-ssr/entry.mjs')).href)
+const { appearancePage, page } = await import(pathToFileURL(resolve('out-ssr/entry.mjs')).href)
 const rendered = renderToString(page)
-assert.match(rendered, /<section[^>]*class="auth-sign-in-panel"/)
+assert.match(rendered, /<section[^>]*class="auth-sign-in-panel\s*"/)
 assert.match(rendered, /<h1[^>]*>Package sign-in fixture<\/h1>/)
 assert.match(rendered, /Continue with Google/)
 assert.match(rendered, /Email me a code/)
@@ -31,6 +31,16 @@ assert.match(rendered, /<button[^>]*type="submit"[^>]* disabled>/)
 assert.match(rendered, /<input[^>]*autocomplete="username webauthn"/)
 assert.match(rendered, /<form[^>]*action="\/account\/auth\/email"/)
 assert.doesNotMatch(rendered, /Loading sign-in/)
+
+const styleAttribute = /\sstyle\s*=/i
+assert.doesNotMatch(rendered, styleAttribute, 'Omitted appearance emitted an inline style')
+for (const appearance of [{ unstyled: true }, { tokens: {} }]) {
+	const html = renderToString(() => appearancePage(appearance))
+	assert.match(html, /<section\b/)
+	assert.doesNotMatch(html, styleAttribute, 'Appearance without tokens emitted an inline style')
+}
+const styled = renderToString(() => appearancePage({ tokens: { '--auth-radius': '8px' } }))
+assert.match(styled, /<section\b[^>]*\sstyle="--auth-radius:8px"/)
 
 // Hydrate the very markup emitted by the installed server entry and read the
 // installed stylesheet through its public subpath, with no resolver aliases.
@@ -120,6 +130,7 @@ try {
 	if (requests.length) throw new Error('An unaccepted agreement sent auth traffic')
 	checkbox.click()
 	await until(() => conditionalSignal)
+	if (ssr.hasAttribute('style')) throw new Error('Hydration added an inline style without tokens')
 	if (ssr !== root.querySelector('section') || field !== root.querySelector('input[type=email]') || getComputedStyle(ssr).display !== 'grid') {
 		throw new Error('SSR markup was replaced or package stylesheet is inactive')
 	}

@@ -1,6 +1,11 @@
 import type { SylphxAuthOptions } from '@sylphx/auth'
 import { safeReturnTo } from '@sylphx/auth/client'
-import { SylphxPasskeyEnroll, SylphxSignIn, type SylphxSignInProps } from '@sylphx/auth-solid'
+import {
+	type SignInAppearance,
+	SylphxPasskeyEnroll,
+	SylphxSignIn,
+	type SylphxSignInProps,
+} from '@sylphx/auth-solid'
 import { createSignal } from 'solid-js'
 
 const options: Pick<SylphxAuthOptions, 'defaultReturnTo'> = { defaultReturnTo: '/home' }
@@ -20,6 +25,10 @@ const props: SylphxSignInProps = {
 		recovery: true,
 	},
 	getAcceptance: () => ({ terms: 'v2' }),
+}
+
+export function appearancePage(appearance: SignInAppearance) {
+	return <SylphxSignIn {...props} appearance={appearance} />
 }
 
 export function page() {
