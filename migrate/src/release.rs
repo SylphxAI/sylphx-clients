@@ -89,6 +89,9 @@ impl ReleaseTarget {
         self.host == host && self.database == database && self.role == role
     }
 
+    // Only an owned _data_migrate may have CREATE outside public; any foreign
+    // _data_migrate is refused. Keep in sync with managed_resource/pg_migrator_role.rs
+    // (Identity::safe_catalog).
     pub async fn check_session(&self, conn: &mut PgConnection) -> Result<()> {
         let safe: Option<bool> = sqlx::query_scalar(
             "SELECT current_database() = $1 AND current_user = $2 AND session_user = $2
@@ -96,8 +99,10 @@ impl ReleaseTarget {
                  AND NOT rolcreaterole AND NOT rolcreatedb
                  AND NOT has_database_privilege(current_database(), 'CREATE')
                  AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_namespace n
-                     WHERE n.nspname <> 'public' AND has_schema_privilege(n.oid, 'CREATE'))
-               FROM pg_catalog.pg_roles WHERE rolname = current_user",
+                     WHERE n.nspname <> 'public'
+                       AND CASE WHEN n.nspname = '_data_migrate' THEN n.nspowner <> r.oid
+                                ELSE has_schema_privilege(r.oid, n.oid, 'CREATE') END)
+               FROM pg_catalog.pg_roles r WHERE rolname = current_user",
         )
         .bind(&self.database)
         .bind(&self.role)
