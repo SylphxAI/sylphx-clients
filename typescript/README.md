@@ -120,6 +120,21 @@ reuse that ID for the same logical view across retries or remounts. Otherwise,
 Signal generates a UUID. Caller properties and IDs are never buffered before
 consent.
 
+After an explicit analytics grant, Signal saves a random anonymous ID in
+first-party `localStorage` on the first send. It is shared across reloads and tabs
+on the same origin and replaced after 13 months. The generated session ID lives
+in `sessionStorage`: it survives reloads and SPA navigation in the same tab and
+changes when more than 30 minutes have passed since the last send. An implicit
+regional grant or blocked browser storage keeps IDs in memory only. Signal
+uses no cookies or fingerprinting for identity.
+
+Use `identify(opaqueId)` for signed-in events; the supplied ID stays in memory.
+Call `reset()` on logout to clear both stored IDs without changing consent.
+Withdrawing analytics consent also clears both IDs and stops sends. Clearing
+browser storage does not erase events already received. Anonymous counts from
+older SDK versions counted full page loads rather than returning browsers, and
+historical events are not relinked.
+
 For Google Consent Mode v2, pass `google: { mode: 'basic' | 'advanced', gtag,
 load }` to `createSignalBrowser`. Supply an adapter that forwards
 `gtag(command, flags)` to the Google tag as `gtag('consent', command, flags).` Let the SDK call

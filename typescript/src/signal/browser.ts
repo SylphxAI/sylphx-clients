@@ -36,7 +36,7 @@ export interface SignalBrowserOptions {
 	requireExplicitConsent?: boolean
 	/** True if the server received Sec-GPC: 1. A false value never overrides navigator GPC. */
 	gpc?: boolean
-	/** Scope consent and campaign storage for this site (same-origin localStorage). */
+	/** Scope consent, campaign and identity storage for this site (same origin). */
 	storageKey?: string
 	google?: SignalGoogleConsent
 	ingest?: SignalIngestOptions
@@ -48,9 +48,9 @@ export interface SignalIngestOptions {
 	/** HTTPS API origin; defaults to https://api.sylphx.com. */
 	baseUrl?: string
 	fetch?: typeof fetch
-	/** Defaults to an in-memory UUID after consent. Never persisted by Signal. */
+	/** Override the generated anonymous ID. The supplied ID is never persisted by Signal. */
 	distinctId?: string
-	/** Defaults to an in-memory UUID after consent. Never persisted by Signal. */
+	/** Override the generated session ID. The supplied ID is never persisted by Signal. */
 	sessionId?: string
 }
 
@@ -76,11 +76,109 @@ type BrowserBindOptions = Pick<
 	'apiKey' | 'baseUrl' | 'fetch' | 'signal' | 'pageLocation' | 'gaMeasurementId'
 >
 const touchLifetime = 30 * 24 * 60 * 60 * 1000
+const sessionGap = 30 * 60 * 1000
 const gzipMinBytes = 1024
 const maxBatchEvents = 500
 // Same character and length limits as Signal's ingest validator.
 function isEventIdentifier(value: unknown): value is string {
 	return typeof value === 'string' && /^[A-Za-z0-9_.:-]{1,128}$/.test(value)
+}
+
+// timestamp is creation time for the anonymous record, last activity for the session record.
+type StoredIdentity = { id: string; timestamp: number }
+
+function beforeAnonymousExpiry(createdAt: number, now: number): boolean {
+	const expiry = new Date(createdAt)
+	const day = expiry.getUTCDate()
+	expiry.setUTCMonth(expiry.getUTCMonth() + 13)
+	// Clamp to the last day of the target month rather than spilling into the next one.
+	if (expiry.getUTCDate() !== day) expiry.setUTCDate(0)
+	return now < expiry.getTime()
+}
+
+function identitySlot(storage: 'localStorage' | 'sessionStorage', key: string) {
+	let memory: StoredIdentity | undefined
+	let saved = false
+	let pendingRemoval = false
+
+	function clearStorage() {
+		if (window[storage].getItem(key) !== null) window[storage].removeItem(key)
+		pendingRemoval = false
+	}
+
+	function fresh(value: unknown, now: number): value is StoredIdentity {
+		return (
+			value !== null &&
+			typeof value === 'object' &&
+			'id' in value &&
+			isEventIdentifier(value.id) &&
+			'timestamp' in value &&
+			typeof value.timestamp === 'number' &&
+			Number.isSafeInteger(value.timestamp) &&
+			value.timestamp >= 0 &&
+			value.timestamp <= now &&
+			(storage === 'localStorage'
+				? beforeAnonymousExpiry(value.timestamp, now)
+				: now - value.timestamp <= sessionGap)
+		)
+	}
+
+	return {
+		next(now: number, persist: boolean): string {
+			let current = fresh(memory, now) ? memory : undefined
+			if (persist) {
+				try {
+					if (pendingRemoval) clearStorage()
+					const raw = window[storage].getItem(key)
+					// A readable miss must not restore an ID removed by another SDK instance.
+					if (saved) current = undefined
+					let record: unknown
+					try {
+						record = raw === null ? undefined : JSON.parse(raw)
+					} catch {
+						// Replace malformed records on the next consented send.
+					}
+					if (fresh(record, now)) {
+						if (storage === 'localStorage') {
+							// Leave the anonymous record untouched, including any future erasure link.
+							memory = record
+							saved = true
+							return record.id
+						}
+						// A failed timestamp write must not erase newer activity kept in memory.
+						if (current?.id !== record.id || current.timestamp < record.timestamp)
+							current = record
+					}
+				} catch {
+					// Storage getters may throw. Keep the current page usable.
+				}
+			}
+			memory = {
+				id: current?.id ?? crypto.randomUUID(),
+				timestamp: storage === 'localStorage' ? (current?.timestamp ?? now) : now,
+			}
+			saved = false
+			if (persist && !pendingRemoval) {
+				try {
+					window[storage].setItem(key, JSON.stringify(memory))
+					saved = true
+				} catch {
+					// Storage can be read-only or out of quota.
+				}
+			}
+			return memory.id
+		},
+		clear() {
+			memory = undefined
+			saved = false
+			pendingRemoval = true
+			try {
+				clearStorage()
+			} catch {
+				// Do not reload the old value if removal failed.
+			}
+		},
+	}
 }
 
 function ingestEndpoint(ingest: SignalIngestOptions): string | undefined {
@@ -119,13 +217,15 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 		region: requireExplicitConsent ? undefined : normalizeRegion(options.region),
 		gpc: options.gpc,
 	}
-	const choiceKey = `${options.storageKey ?? 'sylphx.signal.v1'}.consent`
-	const touchKey = `${options.storageKey ?? 'sylphx.signal.v1'}.touch`
+	const storageKey = options.storageKey ?? 'sylphx.signal.v1'
+	const choiceKey = `${storageKey}.consent`
+	const touchKey = `${storageKey}.touch`
+	const anonymous = identitySlot('localStorage', `${storageKey}.anonymous`)
+	const session = identitySlot('sessionStorage', `${storageKey}.session`)
 	const google = options.google
 	const ingest = options.ingest && { ...options.ingest }
 	const endpoint = ingest && ingestEndpoint(ingest)
 	let distinctId = ingest?.distinctId
-	let sessionId = ingest?.sessionId
 	let pendingTouch: SignalAttribution | undefined
 	let pendingPath: string | undefined
 	let viewed: { path: string; locationPath: string } | undefined
@@ -170,6 +270,19 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 		}
 	}
 
+	function updateChoice() {
+		const before = privacy.storedChoice
+		privacy.storedChoice = storedChoice()
+		if ((before === 'granted' || before === 'analytics_only') && privacy.storedChoice === undefined) {
+			// A removed opt-in must not carry identity or prepared events into regional defaults.
+			collectionEpoch++
+			cancelRetries()
+			anonymous.clear()
+			session.clear()
+			viewed = undefined
+		}
+	}
+
 	function clearCollection() {
 		collectionEpoch++
 		cancelRetries()
@@ -179,7 +292,8 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 		promotedRoute = undefined
 		current = undefined
 		distinctId = ingest?.distinctId
-		sessionId = ingest?.sessionId
+		anonymous.clear()
+		session.clear()
 		try {
 			if (window.localStorage.getItem(touchKey) !== null) window.localStorage.removeItem(touchKey)
 		} catch {
@@ -188,7 +302,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 	}
 
 	function sync(): SignalConsent {
-		privacy.storedChoice = storedChoice()
+		updateChoice()
 		const gpc = hasGpc(privacy)
 		const consent = resolveEffectiveConsent(privacy)
 		if (privacy.storedChoice === 'denied' || gpc) clearCollection()
@@ -297,7 +411,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 
 	function canSend(ads: boolean): boolean {
 		if (disposed) return false
-		privacy.storedChoice = storedChoice()
+		updateChoice()
 		if (privacy.storedChoice === 'denied') clearCollection()
 		return canIngest() && (!ads || allowsAds(resolveEffectiveConsent(privacy)))
 	}
@@ -336,21 +450,24 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 			if (
 				!stillAllowed() ||
 				(distinctId !== undefined && !isEventIdentifier(distinctId)) ||
-				(sessionId !== undefined && !isEventIdentifier(sessionId))
+				(ingest.sessionId !== undefined && !isEventIdentifier(ingest.sessionId))
 			)
 				return false
 			let identity: { distinct_id: string; session_id: string } | undefined
-			const now = new Date().toISOString()
+			const now = Date.now()
+			const eventTime = new Date(now).toISOString()
+			// Regional defaults can still send, but only an explicit analytics grant enables identity storage.
+			const persist = privacy.storedChoice === 'granted' || privacy.storedChoice === 'analytics_only'
 			const json = JSON.stringify({
 				consent: 'granted',
 				events: inputs.map((event) => ({
 					event_id: event.eventId ?? crypto.randomUUID(),
 					event_name: event.eventName,
 					...(identity ??= {
-						distinct_id: (distinctId ??= crypto.randomUUID()),
-						session_id: (sessionId ??= crypto.randomUUID()),
+						distinct_id: distinctId ?? anonymous.next(now, persist),
+						session_id: ingest.sessionId ?? session.next(now, persist),
 					}),
-					event_time: event.eventTime ?? now,
+					event_time: event.eventTime ?? eventTime,
 					properties: { ...campaign, ...event.properties, ...(path === undefined ? {} : { path }) },
 					numeric_value: event.numericValue,
 					is_error: event.isError ?? false,
@@ -471,10 +588,13 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 			distinctId = id
 			return true
 		},
-		/** Clear in-memory identity and page-view dedupe on logout, without changing consent. */
+		/** Clear stored and in-memory identity and page-view dedupe on logout, without changing consent. */
 		reset(): void {
+			collectionEpoch++
+			cancelRetries()
 			distinctId = undefined
-			sessionId = undefined
+			anonymous.clear()
+			session.clear()
 			viewed = undefined
 			// Do not revive configured IDs if consent is later withdrawn and granted again.
 			if (ingest) {

@@ -323,6 +323,7 @@ afterEach(() => {
 
 function browser() {
 	const values = new Map<string, string>()
+	const sessions = new Map<string, string>()
 	const reads: string[] = []
 	const writes: [string, string][] = []
 	const removals: string[] = []
@@ -331,6 +332,11 @@ function browser() {
 	const location = { href: 'https://example.com/landing?fbclid=Same%2EClick&utm_source=source' }
 	const win = Object.assign(new EventTarget(), {
 		location,
+		sessionStorage: {
+			getItem: (name: string) => sessions.get(name) ?? null,
+			setItem: (name: string, value: string) => sessions.set(name, value),
+			removeItem: (name: string) => sessions.delete(name),
+		},
 		localStorage: {
 			getItem: (name: string) => {
 				reads.push(name)
@@ -360,6 +366,8 @@ function browser() {
 	})
 	return {
 		values,
+		sessions,
+		win,
 		reads,
 		writes,
 		removals,
@@ -489,6 +497,8 @@ test('late geo detection cannot override an explicit opt-out', async () => {
 
 const consentStorageSlot = 'sylphx.signal.v1.consent'
 const touchStorageSlot = 'sylphx.signal.v1.touch'
+const anonymousStorageSlot = 'sylphx.signal.v1.anonymous'
+const sessionStorageSlot = 'sylphx.signal.v1.session'
 const utms = {
 	utm_source: 'newsletter',
 	utm_medium: 'email',
@@ -555,7 +565,7 @@ for (const choice of ['granted', 'analytics_only'] as const) {
 			['id-4', 'id-2', 'id-3'],
 		])
 		expect(new Set(writes.map(([name]) => name))).toEqual(
-			new Set([consentStorageSlot, touchStorageSlot]),
+			new Set([consentStorageSlot, touchStorageSlot, anonymousStorageSlot]),
 		)
 		expect(cookieWrites()).toBe(0)
 		expect(cookieReads()).toBe(0)
@@ -740,7 +750,7 @@ test('emits exactly one page_view per navigation, not per effect call', async ()
 		['page_view', { path: '/pricing?variant=b' }],
 		['page_view', { path: '/landing?variant=a' }],
 	])
-	expect([...values.keys()]).toEqual([consentStorageSlot])
+	expect([...values.keys()]).toEqual([consentStorageSlot, anonymousStorageSlot])
 	signal.dispose()
 })
 
@@ -954,6 +964,181 @@ test.each([
 	signal.dispose()
 })
 
+test.each([
+	'granted',
+	'analytics_only',
+] as const)('reuses consented identity across SDK instances with %s', async (choice) => {
+	const { values, sessions, location, cookieWrites } = browser()
+	location.href = 'https://example.com/landing'
+	const { ingest, batches } = ingestTransport()
+	const first = createSignalBrowser({ requireExplicitConsent: true, ingest })
+	first.setConsent(choice)
+	expect(await first.pageView()).toBe(true)
+	first.dispose()
+	const [before] = batches()[0].events
+	const stored = JSON.parse(values.get(anonymousStorageSlot) ?? 'null')
+	expect(stored.id).toBe(before.distinct_id)
+	expect(typeof stored.timestamp).toBe('number')
+	// Reusing a record must leave future co-retained fields alone.
+	const extended = JSON.stringify({ ...stored, erasureLink: 'future-field' })
+	values.set(anonymousStorageSlot, extended)
+	const second = createSignalBrowser({ requireExplicitConsent: true, ingest })
+	expect(await second.pageView('/second')).toBe(true)
+	expect(batches()[1].events[0]).toMatchObject({
+		distinct_id: before.distinct_id,
+		session_id: before.session_id,
+	})
+	expect(values.get(anonymousStorageSlot)).toBe(extended)
+	// A separate tab has the same localStorage but a fresh sessionStorage.
+	sessions.clear()
+	second.dispose()
+	const third = createSignalBrowser({ requireExplicitConsent: true, ingest })
+	expect(await third.pageView()).toBe(true)
+	expect(batches()[2].events[0].distinct_id).toBe(before.distinct_id)
+	expect(batches()[2].events[0].session_id).not.toBe(before.session_id)
+	expect(cookieWrites()).toBe(0)
+	third.dispose()
+})
+
+test('regional defaults can send but never read or write persistent identity without explicit consent', async () => {
+	const { location, values, sessions, reads, writes } = browser()
+	location.href = 'https://example.com/'
+	const { ingest, batches } = ingestTransport()
+	values.set(anonymousStorageSlot, JSON.stringify({ id: 'not-consented', timestamp: Date.now() }))
+	const signal = createSignalBrowser({ region: 'US', ingest })
+	expect(await signal.pageView()).toBe(true)
+	expect(batches()[0].events[0].distinct_id).not.toBe('not-consented')
+	expect(reads).not.toContain(anonymousStorageSlot)
+	expect(writes).toEqual([])
+	expect(sessions.size).toBe(0)
+	signal.dispose()
+})
+
+test('rotates the anonymous ID at 13 calendar months, even if active', async () => {
+	const { values, location } = browser()
+	location.href = 'https://example.com/'
+	const { ingest, batches } = ingestTransport()
+	const signal = createSignalBrowser({ requireExplicitConsent: true, ingest })
+	const clock = jest.spyOn(Date, 'now')
+	try {
+		const created = Date.parse('2025-01-31T12:00:00Z')
+		const expires = Date.parse('2026-02-28T12:00:00Z')
+		clock.mockReturnValue(created)
+		signal.setConsent('analytics_only')
+		expect(await signal.track({ eventName: 'visit' })).toBe(true)
+		const first = batches()[0].events[0].distinct_id
+		clock.mockReturnValue(expires - 1)
+		expect(await signal.track({ eventName: 'visit' })).toBe(true)
+		expect(batches()[1].events[0].distinct_id).toBe(first)
+		clock.mockReturnValue(expires)
+		expect(await signal.track({ eventName: 'visit' })).toBe(true)
+		const rotated = batches()[2].events[0].distinct_id
+		expect(rotated).not.toBe(first)
+		expect(JSON.parse(values.get(anonymousStorageSlot) ?? 'null')).toEqual({
+			id: rotated,
+			timestamp: expires,
+		})
+	} finally {
+		clock.mockRestore()
+		signal.dispose()
+	}
+})
+
+test('keeps a session for SPA navigation and reloads until inactivity exceeds 30 minutes', async () => {
+	const { location } = browser()
+	location.href = 'https://example.com/'
+	const { ingest, batches } = ingestTransport()
+	const options = { requireExplicitConsent: true, ingest }
+	let signal = createSignalBrowser(options)
+	const clock = jest.spyOn(Date, 'now')
+	try {
+		const start = Date.parse('2026-11-25T12:00:00Z')
+		const minute = 60_000
+		clock.mockReturnValue(start)
+		signal.setConsent('analytics_only')
+		expect(await signal.pageView()).toBe(true)
+		clock.mockReturnValue(start + 29 * minute)
+		expect(await signal.pageView('/spa')).toBe(true)
+		signal.dispose()
+		signal = createSignalBrowser(options)
+		clock.mockReturnValue(start + 59 * minute)
+		expect(await signal.pageView('/reload')).toBe(true)
+		clock.mockReturnValue(start + 89 * minute + 1)
+		expect(await signal.pageView('/new')).toBe(true)
+		const [first, spa, reload, next] = batches().map(({ events }) => events[0])
+		expect(spa.session_id).toBe(first.session_id)
+		expect(reload.session_id).toBe(first.session_id)
+		expect(next.session_id).not.toBe(first.session_id)
+		expect(next.distinct_id).toBe(first.distinct_id)
+	} finally {
+		clock.mockRestore()
+		signal.dispose()
+	}
+})
+
+test.each([
+	'reset',
+	'withdrawal',
+	'removed opt-in',
+	'GPC',
+] as const)('%s clears both stored IDs immediately and the next allowed send starts fresh', async (action) => {
+	const { location, values, sessions, nav } = browser()
+	location.href = 'https://example.com/'
+	const { ingest, batches } = ingestTransport()
+	const signal = createSignalBrowser({ requireExplicitConsent: true, ingest })
+	signal.setConsent('analytics_only')
+	expect(await signal.pageView()).toBe(true)
+	expect(values.has(anonymousStorageSlot)).toBe(true)
+	expect(sessions.has(sessionStorageSlot)).toBe(true)
+	if (action === 'reset') signal.reset()
+	else if (action === 'withdrawal') signal.setConsent('denied')
+	else {
+		if (action === 'GPC') nav.globalPrivacyControl = true
+		else values.delete(consentStorageSlot)
+		expect(signal.getConsent()).toEqual(denied)
+	}
+	expect(values.has(anonymousStorageSlot)).toBe(false)
+	expect(sessions.has(sessionStorageSlot)).toBe(false)
+	if (action !== 'reset') {
+		expect(await signal.pageView()).toBe(false)
+		nav.globalPrivacyControl = false
+		signal.setConsent('analytics_only')
+	}
+	expect(await signal.pageView()).toBe(true)
+	const [first, next] = batches().map(({ events }) => events[0])
+	expect(next.distinct_id).not.toBe(first.distinct_id)
+	expect(next.session_id).not.toBe(first.session_id)
+	signal.dispose()
+})
+
+test.each([
+	'getter',
+	'quota',
+] as const)('still sends in-memory IDs when storage throws (%s)', async (mode) => {
+	const { win, location } = browser()
+	location.href = 'https://example.com/'
+	const fail = () => {
+		throw new Error('storage restricted')
+	}
+	for (const name of ['localStorage', 'sessionStorage'] as const) {
+		if (mode === 'getter') Object.defineProperty(win, name, { get: fail })
+		else Object.defineProperty(win[name], 'setItem', { value: fail })
+	}
+	const { ingest, batches } = ingestTransport()
+	const signal = createSignalBrowser({ requireExplicitConsent: true, ingest })
+	signal.setConsent('analytics_only')
+	expect(await signal.pageView()).toBe(true)
+	expect(await signal.pageView('/another')).toBe(true)
+	const [first, next] = batches().map(({ events }) => events[0])
+	expect(next).toMatchObject({ distinct_id: first.distinct_id, session_id: first.session_id })
+	signal.reset()
+	expect(await signal.pageView()).toBe(true)
+	const reset = batches()[2].events[0]
+	expect(reset.distinct_id).not.toBe(first.distinct_id)
+	expect(reset.session_id).not.toBe(first.session_id)
+	signal.dispose()
+})
+
 test('identify validates opaque IDs and uses them only in future consented events', async () => {
 	const { location, values, writes, cookieWrites, nav } = browser()
 	location.href = 'https://example.com/landing'
@@ -982,7 +1167,7 @@ test('identify validates opaque IDs and uses them only in future consented event
 })
 
 test('reset rotates both IDs and allows the same page view without touching consent or attribution', async () => {
-	const { values, writes, removals, cookieWrites } = browser()
+	const { values, writes, removals, cookieWrites, sessions } = browser()
 	values.set(consentStorageSlot, 'analytics_only')
 	const { ingest, batches } = ingestTransport()
 	const signal = createSignalBrowser({
@@ -1008,7 +1193,10 @@ test('reset rotates both IDs and allows the same page view without touching cons
 	expect(next).toMatchObject({ distinct_id: after.distinct_id, session_id: after.session_id })
 	expect(values.get(consentStorageSlot)).toBe('analytics_only')
 	expect(values.get(touchStorageSlot)).toBe(touch)
-	expect(writes).toEqual([[touchStorageSlot, expect.any(String)]])
+	expect(writes).toEqual([
+		[touchStorageSlot, expect.any(String)],
+		[anonymousStorageSlot, expect.any(String)],
+	])
 	expect(removals).toEqual([])
 	expect(cookieWrites()).toBe(0)
 	// Withdrawal and a new grant must not restore the identity configured before reset.
@@ -1016,6 +1204,7 @@ test('reset rotates both IDs and allows the same page view without touching cons
 	signal.setConsent('analytics_only')
 	expect(await signal.track({ eventName: 'visit' })).toBe(true)
 	const renewed = batches()[3].events[0]
+	expect(sessions.has(sessionStorageSlot)).toBe(true)
 	expect(renewed.distinct_id).not.toBe('configured-user')
 	expect(renewed.session_id).not.toBe('configured-session')
 	signal.dispose()
