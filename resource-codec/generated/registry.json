@@ -673,6 +673,31 @@
       ]
     },
     {
+      "doc": "The width of a UTC active-user bucket.",
+      "name": "sylphx.analytics.v1.ActiveUsersInterval",
+      "package": "sylphx.analytics.v1",
+      "values": [
+        {
+          "doc": "One UTC calendar day.",
+          "number": 1,
+          "proto_name": "ACTIVE_USERS_INTERVAL_DAY",
+          "wire": "day"
+        },
+        {
+          "doc": "One UTC ISO week starting Monday at 00:00:00Z.",
+          "number": 2,
+          "proto_name": "ACTIVE_USERS_INTERVAL_WEEK",
+          "wire": "week"
+        },
+        {
+          "doc": "One UTC calendar month, starting on the first at 00:00:00Z.",
+          "number": 3,
+          "proto_name": "ACTIVE_USERS_INTERVAL_MONTH",
+          "wire": "month"
+        }
+      ]
+    },
+    {
       "doc": "The app's analytics consent, as sent with a batch.",
       "name": "sylphx.analytics.v1.AnalyticsConsent",
       "package": "sylphx.analytics.v1",
@@ -22090,6 +22115,150 @@
       "package": "sylphx.ai.v1"
     },
     {
+      "doc": "Exact distinct active subjects in UTC calendar buckets. Partial buckets\ncount only activity inside the query interval, not trailing 7 or 30 days.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "UTC calendar day, Monday-start week, or calendar month (not trailing\n7- or 30-day counts). Only events inside the requested window contribute.",
+          "filterable": false,
+          "name": "interval",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "enum",
+            "name": "sylphx.analytics.v1.ActiveUsersInterval"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Top-level string property per qualifying event. Omit for unsegmented\nbuckets. A dot is literal, not a path. Missing or non-string values\ngroup with the empty string. A subject may contribute to multiple groups.",
+          "filterable": false,
+          "name": "breakdown_property",
+          "number": 2,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Up to four exact string matches, all required on each qualifying event.\nKeys use the breakdown-property grammar; values are at most 128 bytes.",
+          "filterable": false,
+          "name": "property_filters",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "map",
+            "value": {
+              "kind": "scalar",
+              "scalar": "string"
+            }
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Maximum bucket rows returned. Defaults to 100; clamped to 1–500.",
+          "filterable": false,
+          "name": "limit",
+          "number": 4,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        }
+      ],
+      "name": "sylphx.analytics.v1.ActiveUsersQuery",
+      "package": "sylphx.analytics.v1"
+    },
+    {
+      "doc": "Active users for one bucket and breakdown value.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The UTC start of the calendar bucket, which may precede start_time.",
+          "filterable": false,
+          "name": "bucket_start",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The event breakdown value; empty when unsegmented.",
+          "filterable": false,
+          "name": "breakdown_value",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Exact count of distinct stored subject IDs. When a person has both an\nanonymous and an identified subject ID on the day they sign in, they\ncount as two active subjects in that day; this query does not stitch IDs.",
+          "filterable": false,
+          "name": "active_users",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        }
+      ],
+      "name": "sylphx.analytics.v1.AnalyticsActiveUsersBucket",
+      "package": "sylphx.analytics.v1"
+    },
+    {
       "doc": "An Analytics Event is one immutable thing a person or a game did, recorded by\nan SDK or a server. Its id is the sender's `event_id`, so a resend of the\nsame event is the same record.\n\nEvent names. A name starting with `$` is the platform's:\n\n- `$pageview` with `path` (required), `referrer`, `title` in `properties`.\n- `$session_start`, with no required property.\n- `$session_end` with `duration_ms` (integer, milliseconds).\n- `level_reached` with `level` (integer or string).\n- `purchase` with `sku`, `amount_minor` (integer, currency minor units),\n  `currency` (ISO 4217) and `trust`, always `client` in this version: the\n  amount is what the client reported, not a ledger fact.\n\n(`level_reached` and `purchase` carry no `$` because games and shops name\nthem themselves; the service checks their properties when it sees the name.)\nAny other name is a custom event with free properties; a conversion is a\ncustom event whose name the reader lists in `GetStats`.",
       "fields": [
         {
@@ -22635,6 +22804,81 @@
         }
       ],
       "name": "sylphx.analytics.v1.AnalyticsRollupBucket",
+      "package": "sylphx.analytics.v1"
+    },
+    {
+      "doc": "Sessions for one UTC day and breakdown value.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The UTC start of the day containing the first in-window event.",
+          "filterable": false,
+          "name": "bucket_start",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The entry-event breakdown value; empty when unsegmented.",
+          "filterable": false,
+          "name": "breakdown_value",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Number of sessions with a qualifying first in-window event.",
+          "filterable": false,
+          "name": "session_count",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Exact median of last minus first in-window event time, in milliseconds.\nSessions already running at start_time count from their first in-window\nevent, and events at or after end_time are excluded. A single event yields\nzero; for an even count the two middle durations are averaged.",
+          "filterable": false,
+          "name": "median_duration_ms",
+          "number": 4,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "double"
+          }
+        }
+      ],
+      "name": "sylphx.analytics.v1.AnalyticsSessionBucket",
       "package": "sylphx.analytics.v1"
     },
     {
@@ -23461,7 +23705,7 @@
       "package": "sylphx.analytics.v1"
     },
     {
-      "doc": "The request of QueryAnalyticsEvents. Set exactly one of rollup, funnel, or retention.",
+      "doc": "The request of QueryAnalyticsEvents. Select exactly one query mode.",
       "fields": [
         {
           "behaviors": [
@@ -23525,7 +23769,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "Time buckets, counts, and an optional property sum.",
+          "doc": "Time buckets, counts, and an optional property sum. Set exactly one of\nrollup, funnel, retention, active_users, or sessions.",
           "filterable": false,
           "name": "rollup",
           "number": 4,
@@ -23575,6 +23819,44 @@
           "type": {
             "kind": "message",
             "name": "sylphx.analytics.v1.RetentionQuery"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Exact distinct active subjects per UTC day, Monday-start week, or calendar month.",
+          "filterable": false,
+          "name": "active_users",
+          "number": 7,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.analytics.v1.ActiveUsersQuery"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Session count and exact median duration by UTC start day.",
+          "filterable": false,
+          "name": "sessions",
+          "number": 8,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.analytics.v1.SessionsQuery"
           }
         }
       ],
@@ -23633,6 +23915,40 @@
           "type": {
             "kind": "message",
             "name": "sylphx.analytics.v1.AnalyticsRetentionCohort"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Nonempty active-user buckets ordered by newest start, then count descending\nand breakdown value ascending. Empty windows have no buckets.",
+          "filterable": false,
+          "name": "active_user_buckets",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.analytics.v1.AnalyticsActiveUsersBucket"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Nonempty session buckets ordered by newest start, then count descending\nand breakdown value ascending. Empty windows have no buckets.",
+          "filterable": false,
+          "name": "session_buckets",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.analytics.v1.AnalyticsSessionBucket"
           }
         }
       ],
@@ -23904,6 +24220,73 @@
         }
       ],
       "name": "sylphx.analytics.v1.RollupQuery",
+      "package": "sylphx.analytics.v1"
+    },
+    {
+      "doc": "Sessions over deduplicated events, attributed to the UTC day of their first\nin-window event. An SDK session ID wins: neither midnight, sign-in, nor a\ngap greater than 30 minutes splits that ID. Events without a session ID\nform runs per stored subject, split only at gaps strictly over 30 minutes.",
+      "fields": [
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "String property of the first in-window event, whose UTC day owns the session.\nA supplied SDK session ID is not split on sign-in, midnight, or idle gaps.\nWithout an SDK ID, consecutive events on the same stored subject form a\nsession until a gap strictly exceeds 30 minutes. Omit for unsegmented\nbuckets. A dot is literal, not a path. Missing or non-string values group\nwith the empty string.",
+          "filterable": false,
+          "name": "breakdown_property",
+          "number": 1,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Up to four exact string matches required on the first in-window event\nonly. Keys use the breakdown-property grammar; values are at most 128 bytes.",
+          "filterable": false,
+          "name": "property_filters",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "map",
+            "value": {
+              "kind": "scalar",
+              "scalar": "string"
+            }
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Maximum bucket rows returned. Defaults to 100; clamped to 1–500.",
+          "filterable": false,
+          "name": "limit",
+          "number": 3,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        }
+      ],
+      "name": "sylphx.analytics.v1.SessionsQuery",
       "package": "sylphx.analytics.v1"
     },
     {

@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.analytics.v1.ActiveUsersInterval",
+  "package": "sylphx.analytics.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "ACTIVE_USERS_INTERVAL_DAY",
+      "wire": "day"
+    },
+    {
+      "number": 2,
+      "proto_name": "ACTIVE_USERS_INTERVAL_WEEK",
+      "wire": "week"
+    },
+    {
+      "number": 3,
+      "proto_name": "ACTIVE_USERS_INTERVAL_MONTH",
+      "wire": "month"
+    }
+  ]
+}

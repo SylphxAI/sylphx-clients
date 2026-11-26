@@ -4250,7 +4250,7 @@
                 {
                   "field": "rollup",
                   "flag": "--rollup",
-                  "summary": "Time buckets, counts, and an optional property sum.",
+                  "summary": "Time buckets, counts, and an optional property sum. Set exactly one of rollup, funnel, retention, active_users, or sessions.",
                   "type": "json"
                 },
                 {
@@ -4263,6 +4263,18 @@
                   "field": "retention",
                   "flag": "--retention",
                   "summary": "Calendar cohorts and exact subject retention by period.",
+                  "type": "json"
+                },
+                {
+                  "field": "active_users",
+                  "flag": "--active-users",
+                  "summary": "Exact distinct active subjects per UTC day, Monday-start week, or calendar month.",
+                  "type": "json"
+                },
+                {
+                  "field": "sessions",
+                  "flag": "--sessions",
+                  "summary": "Session count and exact median duration by UTC start day.",
                   "type": "json"
                 }
               ],

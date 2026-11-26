@@ -5602,6 +5602,64 @@
         },
         "type": "object"
       },
+      "sylphx.analytics.v1.ActiveUsersInterval": {
+        "description": "The width of a UTC active-user bucket.",
+        "enum": [
+          "day",
+          "week",
+          "month"
+        ],
+        "type": "string"
+      },
+      "sylphx.analytics.v1.ActiveUsersQuery": {
+        "description": "Exact distinct active subjects in UTC calendar buckets. Partial buckets\ncount only activity inside the query interval, not trailing 7 or 30 days.",
+        "properties": {
+          "breakdown_property": {
+            "description": "Top-level string property per qualifying event. Omit for unsegmented\nbuckets. A dot is literal, not a path. Missing or non-string values\ngroup with the empty string. A subject may contribute to multiple groups.",
+            "type": "string"
+          },
+          "interval": {
+            "$ref": "#/components/schemas/sylphx.analytics.v1.ActiveUsersInterval",
+            "description": "UTC calendar day, Monday-start week, or calendar month (not trailing\n7- or 30-day counts). Only events inside the requested window contribute."
+          },
+          "limit": {
+            "description": "Maximum bucket rows returned. Defaults to 100; clamped to 1–500.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "property_filters": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Up to four exact string matches, all required on each qualifying event.\nKeys use the breakdown-property grammar; values are at most 128 bytes.",
+            "type": "object"
+          }
+        },
+        "required": [
+          "interval"
+        ],
+        "type": "object"
+      },
+      "sylphx.analytics.v1.AnalyticsActiveUsersBucket": {
+        "description": "Active users for one bucket and breakdown value.",
+        "properties": {
+          "active_users": {
+            "description": "Exact count of distinct stored subject IDs. When a person has both an\nanonymous and an identified subject ID on the day they sign in, they\ncount as two active subjects in that day; this query does not stitch IDs.",
+            "format": "int64",
+            "type": "string"
+          },
+          "breakdown_value": {
+            "description": "The event breakdown value; empty when unsegmented.",
+            "type": "string"
+          },
+          "bucket_start": {
+            "description": "The UTC start of the calendar bucket, which may precede start_time.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.analytics.v1.AnalyticsConsent": {
         "description": "The app's analytics consent, as sent with a batch.",
         "enum": [
@@ -5774,6 +5832,30 @@
           },
           "unique_subjects": {
             "description": "Exact number of distinct subjects.",
+            "format": "int64",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.analytics.v1.AnalyticsSessionBucket": {
+        "description": "Sessions for one UTC day and breakdown value.",
+        "properties": {
+          "breakdown_value": {
+            "description": "The entry-event breakdown value; empty when unsegmented.",
+            "type": "string"
+          },
+          "bucket_start": {
+            "description": "The UTC start of the day containing the first in-window event.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "median_duration_ms": {
+            "description": "Exact median of last minus first in-window event time, in milliseconds.\nSessions already running at start_time count from their first in-window\nevent, and events at or after end_time are excluded. A single event yields\nzero; for an even count the two middle durations are averaged.",
+            "type": "number"
+          },
+          "session_count": {
+            "description": "Number of sessions with a qualifying first in-window event.",
             "format": "int64",
             "type": "string"
           }
@@ -6061,8 +6143,12 @@
         "type": "object"
       },
       "sylphx.analytics.v1.QueryAnalyticsEventsRequest": {
-        "description": "The request of QueryAnalyticsEvents. Set exactly one of rollup, funnel, or retention.",
+        "description": "The request of QueryAnalyticsEvents. Select exactly one query mode.",
         "properties": {
+          "active_users": {
+            "$ref": "#/components/schemas/sylphx.analytics.v1.ActiveUsersQuery",
+            "description": "Exact distinct active subjects per UTC day, Monday-start week, or calendar month."
+          },
           "end_time": {
             "description": "Exclusive end of the interval; defaults to now.",
             "format": "date-time",
@@ -6083,7 +6169,11 @@
           },
           "rollup": {
             "$ref": "#/components/schemas/sylphx.analytics.v1.RollupQuery",
-            "description": "Time buckets, counts, and an optional property sum."
+            "description": "Time buckets, counts, and an optional property sum. Set exactly one of\nrollup, funnel, retention, active_users, or sessions."
+          },
+          "sessions": {
+            "$ref": "#/components/schemas/sylphx.analytics.v1.SessionsQuery",
+            "description": "Session count and exact median duration by UTC start day."
           },
           "start_time": {
             "description": "Inclusive start of the interval, at most 31 days before end_time.",
@@ -6100,6 +6190,13 @@
       "sylphx.analytics.v1.QueryAnalyticsEventsResponse": {
         "description": "The response of QueryAnalyticsEvents. Only the requested result is populated.",
         "properties": {
+          "active_user_buckets": {
+            "description": "Nonempty active-user buckets ordered by newest start, then count descending\nand breakdown value ascending. Empty windows have no buckets.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.analytics.v1.AnalyticsActiveUsersBucket"
+            },
+            "type": "array"
+          },
           "funnel_steps": {
             "description": "Steps in request order within each breakdown, ranked by starters descending\nthen by breakdown value ascending.",
             "items": {
@@ -6118,6 +6215,13 @@
             "description": "Buckets ordered by newest start, then event name and dimension values ascending.",
             "items": {
               "$ref": "#/components/schemas/sylphx.analytics.v1.AnalyticsRollupBucket"
+            },
+            "type": "array"
+          },
+          "session_buckets": {
+            "description": "Nonempty session buckets ordered by newest start, then count descending\nand breakdown value ascending. Empty windows have no buckets.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.analytics.v1.AnalyticsSessionBucket"
             },
             "type": "array"
           }
@@ -6224,6 +6328,28 @@
         "required": [
           "interval"
         ],
+        "type": "object"
+      },
+      "sylphx.analytics.v1.SessionsQuery": {
+        "description": "Sessions over deduplicated events, attributed to the UTC day of their first\nin-window event. An SDK session ID wins: neither midnight, sign-in, nor a\ngap greater than 30 minutes splits that ID. Events without a session ID\nform runs per stored subject, split only at gaps strictly over 30 minutes.",
+        "properties": {
+          "breakdown_property": {
+            "description": "String property of the first in-window event, whose UTC day owns the session.\nA supplied SDK session ID is not split on sign-in, midnight, or idle gaps.\nWithout an SDK ID, consecutive events on the same stored subject form a\nsession until a gap strictly exceeds 30 minutes. Omit for unsegmented\nbuckets. A dot is literal, not a path. Missing or non-string values group\nwith the empty string.",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum bucket rows returned. Defaults to 100; clamped to 1–500.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "property_filters": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Up to four exact string matches required on the first in-window event\nonly. Keys use the breakdown-property grammar; values are at most 128 bytes.",
+            "type": "object"
+          }
+        },
         "type": "object"
       },
       "sylphx.artifacts.v1.Artifact": {
@@ -70863,6 +70989,10 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "active_users": {
+                    "$ref": "#/components/schemas/sylphx.analytics.v1.ActiveUsersQuery",
+                    "description": "Exact distinct active subjects per UTC day, Monday-start week, or calendar month."
+                  },
                   "end_time": {
                     "description": "Exclusive end of the interval; defaults to now.",
                     "format": "date-time",
@@ -70878,7 +71008,11 @@
                   },
                   "rollup": {
                     "$ref": "#/components/schemas/sylphx.analytics.v1.RollupQuery",
-                    "description": "Time buckets, counts, and an optional property sum."
+                    "description": "Time buckets, counts, and an optional property sum. Set exactly one of\nrollup, funnel, retention, active_users, or sessions."
+                  },
+                  "sessions": {
+                    "$ref": "#/components/schemas/sylphx.analytics.v1.SessionsQuery",
+                    "description": "Session count and exact median duration by UTC start day."
                   },
                   "start_time": {
                     "description": "Inclusive start of the interval, at most 31 days before end_time.",

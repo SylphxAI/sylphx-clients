@@ -3,6 +3,69 @@
 
 #![allow(clippy::all)]
 
+/// Exact distinct active subjects in UTC calendar buckets. Partial buckets
+/// count only activity inside the query interval, not trailing 7 or 30 days.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ActiveUsersQuery {
+    /// UTC calendar day, Monday-start week, or calendar month (not trailing
+    /// 7- or 30-day counts). Only events inside the requested window contribute.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub interval: Option<ActiveUsersInterval>,
+    /// Top-level string property per qualifying event. Omit for unsegmented
+    /// buckets. A dot is literal, not a path. Missing or non-string values
+    /// group with the empty string. A subject may contribute to multiple groups.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "breakdownProperty"
+    )]
+    pub breakdown_property: Option<String>,
+    /// Up to four exact string matches, all required on each qualifying event.
+    /// Keys use the breakdown-property grammar; values are at most 128 bytes.
+    #[serde(
+        default,
+        skip_serializing_if = "std::collections::BTreeMap::is_empty",
+        alias = "propertyFilters"
+    )]
+    pub property_filters: std::collections::BTreeMap<String, String>,
+    /// Maximum bucket rows returned. Defaults to 100; clamped to 1–500.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub limit: Option<i32>,
+}
+
+/// Active users for one bucket and breakdown value.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct AnalyticsActiveUsersBucket {
+    /// The UTC start of the calendar bucket, which may precede start_time.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "bucketStart"
+    )]
+    pub bucket_start: String,
+    /// The event breakdown value; empty when unsegmented.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "breakdownValue"
+    )]
+    pub breakdown_value: String,
+    /// Exact count of distinct stored subject IDs. When a person has both an
+    /// anonymous and an identified subject ID on the day they sign in, they
+    /// count as two active subjects in that day; this query does not stitch IDs.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "activeUsers"
+    )]
+    pub active_users: i64,
+}
+
 /// An Analytics Event is one immutable thing a person or a game did, recorded by
 /// an SDK or a server. Its id is the sender's `event_id`, so a resend of the
 /// same event is the same record.
@@ -249,6 +312,44 @@ pub struct AnalyticsRollupBucket {
         alias = "propertySum"
     )]
     pub property_sum: Option<f64>,
+}
+
+/// Sessions for one UTC day and breakdown value.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct AnalyticsSessionBucket {
+    /// The UTC start of the day containing the first in-window event.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "bucketStart"
+    )]
+    pub bucket_start: String,
+    /// The entry-event breakdown value; empty when unsegmented.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "breakdownValue"
+    )]
+    pub breakdown_value: String,
+    /// Number of sessions with a qualifying first in-window event.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "sessionCount"
+    )]
+    pub session_count: i64,
+    /// Exact median of last minus first in-window event time, in milliseconds.
+    /// Sessions already running at start_time count from their first in-window
+    /// event, and events at or after end_time are excluded. A single event yields
+    /// zero; for an even count the two middle durations are averaged.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "medianDurationMs"
+    )]
+    pub median_duration_ms: Option<f64>,
 }
 
 /// The request of BatchEvents. A batch has at most 500 events and 1 MiB
@@ -561,7 +662,7 @@ pub struct ListAnalyticsEventsResponse {
     pub next_page_token: String,
 }
 
-/// The request of QueryAnalyticsEvents. Set exactly one of rollup, funnel, or retention.
+/// The request of QueryAnalyticsEvents. Select exactly one query mode.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct QueryAnalyticsEventsRequest {
@@ -586,7 +687,8 @@ pub struct QueryAnalyticsEventsRequest {
         alias = "endTime"
     )]
     pub end_time: String,
-    /// Time buckets, counts, and an optional property sum.
+    /// Time buckets, counts, and an optional property sum. Set exactly one of
+    /// rollup, funnel, retention, active_users, or sessions.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rollup: Option<RollupQuery>,
     /// Ordered conversion steps.
@@ -595,6 +697,16 @@ pub struct QueryAnalyticsEventsRequest {
     /// Calendar cohorts and exact subject retention by period.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub retention: Option<RetentionQuery>,
+    /// Exact distinct active subjects per UTC day, Monday-start week, or calendar month.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "activeUsers"
+    )]
+    pub active_users: Option<ActiveUsersQuery>,
+    /// Session count and exact median duration by UTC start day.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sessions: Option<SessionsQuery>,
 }
 
 /// The response of QueryAnalyticsEvents. Only the requested result is populated.
@@ -619,6 +731,22 @@ pub struct QueryAnalyticsEventsResponse {
         alias = "retentionCohorts"
     )]
     pub retention_cohorts: Vec<AnalyticsRetentionCohort>,
+    /// Nonempty active-user buckets ordered by newest start, then count descending
+    /// and breakdown value ascending. Empty windows have no buckets.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "activeUserBuckets"
+    )]
+    pub active_user_buckets: Vec<AnalyticsActiveUsersBucket>,
+    /// Nonempty session buckets ordered by newest start, then count descending
+    /// and breakdown value ascending. Empty windows have no buckets.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "sessionBuckets"
+    )]
+    pub session_buckets: Vec<AnalyticsSessionBucket>,
 }
 
 /// Exact subject retention by UTC calendar period. A subject enters at their
@@ -713,6 +841,93 @@ pub struct RollupQuery {
     /// Maximum buckets returned. Defaults to 100; clamped to 1–500.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub limit: Option<i32>,
+}
+
+/// Sessions over deduplicated events, attributed to the UTC day of their first
+/// in-window event. An SDK session ID wins: neither midnight, sign-in, nor a
+/// gap greater than 30 minutes splits that ID. Events without a session ID
+/// form runs per stored subject, split only at gaps strictly over 30 minutes.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SessionsQuery {
+    /// String property of the first in-window event, whose UTC day owns the session.
+    /// A supplied SDK session ID is not split on sign-in, midnight, or idle gaps.
+    /// Without an SDK ID, consecutive events on the same stored subject form a
+    /// session until a gap strictly exceeds 30 minutes. Omit for unsegmented
+    /// buckets. A dot is literal, not a path. Missing or non-string values group
+    /// with the empty string.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "breakdownProperty"
+    )]
+    pub breakdown_property: Option<String>,
+    /// Up to four exact string matches required on the first in-window event
+    /// only. Keys use the breakdown-property grammar; values are at most 128 bytes.
+    #[serde(
+        default,
+        skip_serializing_if = "std::collections::BTreeMap::is_empty",
+        alias = "propertyFilters"
+    )]
+    pub property_filters: std::collections::BTreeMap<String, String>,
+    /// Maximum bucket rows returned. Defaults to 100; clamped to 1–500.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub limit: Option<i32>,
+}
+
+/// The width of a UTC active-user bucket.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum ActiveUsersInterval {
+    /// One UTC calendar day.
+    Day,
+    /// One UTC ISO week starting Monday at 00:00:00Z.
+    Week,
+    /// One UTC calendar month, starting on the first at 00:00:00Z.
+    Month,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl ActiveUsersInterval {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Day => "day",
+            Self::Week => "week",
+            Self::Month => "month",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "day" => Self::Day,
+            "week" => Self::Week,
+            "month" => Self::Month,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for ActiveUsersInterval {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for ActiveUsersInterval {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for ActiveUsersInterval {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
 }
 
 /// The app's analytics consent, as sent with a batch.

@@ -6,6 +6,45 @@ import './common.js'
 import type * as common from './common.js'
 
 /**
+ * Exact distinct active subjects in UTC calendar buckets. Partial buckets
+ * count only activity inside the query interval, not trailing 7 or 30 days.
+ */
+export interface ActiveUsersQuery {
+	/**
+	 * UTC calendar day, Monday-start week, or calendar month (not trailing
+	 * 7- or 30-day counts). Only events inside the requested window contribute.
+	 */
+	interval?: ActiveUsersInterval
+	/**
+	 * Top-level string property per qualifying event. Omit for unsegmented
+	 * buckets. A dot is literal, not a path. Missing or non-string values
+	 * group with the empty string. A subject may contribute to multiple groups.
+	 */
+	breakdownProperty?: string
+	/**
+	 * Up to four exact string matches, all required on each qualifying event.
+	 * Keys use the breakdown-property grammar; values are at most 128 bytes.
+	 */
+	propertyFilters?: Record<string, string>
+	/** Maximum bucket rows returned. Defaults to 100; clamped to 1–500. */
+	limit?: number
+}
+
+/** Active users for one bucket and breakdown value. */
+export interface AnalyticsActiveUsersBucket {
+	/** The UTC start of the calendar bucket, which may precede start_time. */
+	bucketStart?: string
+	/** The event breakdown value; empty when unsegmented. */
+	breakdownValue?: string
+	/**
+	 * Exact count of distinct stored subject IDs. When a person has both an
+	 * anonymous and an identified subject ID on the day they sign in, they
+	 * count as two active subjects in that day; this query does not stitch IDs.
+	 */
+	activeUsers?: string
+}
+
+/**
  * An Analytics Event is one immutable thing a person or a game did, recorded by
  * an SDK or a server. Its id is the sender's `event_id`, so a resend of the
  * same event is the same record.
@@ -112,6 +151,23 @@ export interface AnalyticsRollupBucket {
 	uniqueSubjects?: string
 	/** The numeric sum, present when sum_property was requested. */
 	propertySum?: number
+}
+
+/** Sessions for one UTC day and breakdown value. */
+export interface AnalyticsSessionBucket {
+	/** The UTC start of the day containing the first in-window event. */
+	bucketStart?: string
+	/** The entry-event breakdown value; empty when unsegmented. */
+	breakdownValue?: string
+	/** Number of sessions with a qualifying first in-window event. */
+	sessionCount?: string
+	/**
+	 * Exact median of last minus first in-window event time, in milliseconds.
+	 * Sessions already running at start_time count from their first in-window
+	 * event, and events at or after end_time are excluded. A single event yields
+	 * zero; for an even count the two middle durations are averaged.
+	 */
+	medianDurationMs?: number
 }
 
 /**
@@ -280,7 +336,7 @@ export interface ListAnalyticsEventsResponse {
 	nextPageToken?: string
 }
 
-/** The request of QueryAnalyticsEvents. Set exactly one of rollup, funnel, or retention. */
+/** The request of QueryAnalyticsEvents. Select exactly one query mode. */
 export interface QueryAnalyticsEventsRequest {
 	/** The environment whose events to query. */
 	parent: string
@@ -288,12 +344,19 @@ export interface QueryAnalyticsEventsRequest {
 	startTime: string
 	/** Exclusive end of the interval; defaults to now. */
 	endTime?: string
-	/** Time buckets, counts, and an optional property sum. */
+	/**
+	 * Time buckets, counts, and an optional property sum. Set exactly one of
+	 * rollup, funnel, retention, active_users, or sessions.
+	 */
 	rollup?: RollupQuery
 	/** Ordered conversion steps. */
 	funnel?: FunnelQuery
 	/** Calendar cohorts and exact subject retention by period. */
 	retention?: RetentionQuery
+	/** Exact distinct active subjects per UTC day, Monday-start week, or calendar month. */
+	activeUsers?: ActiveUsersQuery
+	/** Session count and exact median duration by UTC start day. */
+	sessions?: SessionsQuery
 }
 
 /** The response of QueryAnalyticsEvents. Only the requested result is populated. */
@@ -307,6 +370,16 @@ export interface QueryAnalyticsEventsResponse {
 	funnelSteps?: AnalyticsFunnelStep[]
 	/** Cohorts ordered by newest start, then size descending and breakdown value ascending. */
 	retentionCohorts?: AnalyticsRetentionCohort[]
+	/**
+	 * Nonempty active-user buckets ordered by newest start, then count descending
+	 * and breakdown value ascending. Empty windows have no buckets.
+	 */
+	activeUserBuckets?: AnalyticsActiveUsersBucket[]
+	/**
+	 * Nonempty session buckets ordered by newest start, then count descending
+	 * and breakdown value ascending. Empty windows have no buckets.
+	 */
+	sessionBuckets?: AnalyticsSessionBucket[]
 }
 
 /**
@@ -364,6 +437,34 @@ export interface RollupQuery {
 	limit?: number
 }
 
+/**
+ * Sessions over deduplicated events, attributed to the UTC day of their first
+ * in-window event. An SDK session ID wins: neither midnight, sign-in, nor a
+ * gap greater than 30 minutes splits that ID. Events without a session ID
+ * form runs per stored subject, split only at gaps strictly over 30 minutes.
+ */
+export interface SessionsQuery {
+	/**
+	 * String property of the first in-window event, whose UTC day owns the session.
+	 * A supplied SDK session ID is not split on sign-in, midnight, or idle gaps.
+	 * Without an SDK ID, consecutive events on the same stored subject form a
+	 * session until a gap strictly exceeds 30 minutes. Omit for unsegmented
+	 * buckets. A dot is literal, not a path. Missing or non-string values group
+	 * with the empty string.
+	 */
+	breakdownProperty?: string
+	/**
+	 * Up to four exact string matches required on the first in-window event
+	 * only. Keys use the breakdown-property grammar; values are at most 128 bytes.
+	 */
+	propertyFilters?: Record<string, string>
+	/** Maximum bucket rows returned. Defaults to 100; clamped to 1–500. */
+	limit?: number
+}
+
+/** The width of a UTC active-user bucket. */
+export type ActiveUsersInterval = 'day' | 'week' | 'month' | (string & {})
+
 /** The app's analytics consent, as sent with a batch. */
 export type AnalyticsConsent = 'granted' | 'denied' | (string & {})
 
@@ -380,6 +481,15 @@ export type RetentionInterval = 'day' | 'week' | (string & {})
 export type RollupInterval = 'hour' | 'day' | (string & {})
 
 runtime.registerSchemas({
+	'sylphx.analytics.v1.ActiveUsersQuery': [
+		['breakdownProperty', 'breakdown_property'],
+		['propertyFilters', 'property_filters', undefined, 'map'],
+	],
+	'sylphx.analytics.v1.AnalyticsActiveUsersBucket': [
+		['bucketStart', 'bucket_start'],
+		['breakdownValue', 'breakdown_value'],
+		['activeUsers', 'active_users'],
+	],
 	'sylphx.analytics.v1.AnalyticsEvent': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['eventName', 'event_name'],
@@ -412,6 +522,12 @@ runtime.registerSchemas({
 		['eventCount', 'event_count'],
 		['uniqueSubjects', 'unique_subjects'],
 		['propertySum', 'property_sum'],
+	],
+	'sylphx.analytics.v1.AnalyticsSessionBucket': [
+		['bucketStart', 'bucket_start'],
+		['breakdownValue', 'breakdown_value'],
+		['sessionCount', 'session_count'],
+		['medianDurationMs', 'median_duration_ms'],
 	],
 	'sylphx.analytics.v1.BatchEventsRequest': [
 		['events', 'events', 'sylphx.analytics.v1.EventInput'],
@@ -463,11 +579,15 @@ runtime.registerSchemas({
 		['rollup', 'rollup', 'sylphx.analytics.v1.RollupQuery'],
 		['funnel', 'funnel', 'sylphx.analytics.v1.FunnelQuery'],
 		['retention', 'retention', 'sylphx.analytics.v1.RetentionQuery'],
+		['activeUsers', 'active_users', 'sylphx.analytics.v1.ActiveUsersQuery'],
+		['sessions', 'sessions', 'sylphx.analytics.v1.SessionsQuery'],
 	],
 	'sylphx.analytics.v1.QueryAnalyticsEventsResponse': [
 		['rollupBuckets', 'rollup_buckets', 'sylphx.analytics.v1.AnalyticsRollupBucket'],
 		['funnelSteps', 'funnel_steps', 'sylphx.analytics.v1.AnalyticsFunnelStep'],
 		['retentionCohorts', 'retention_cohorts', 'sylphx.analytics.v1.AnalyticsRetentionCohort'],
+		['activeUserBuckets', 'active_user_buckets', 'sylphx.analytics.v1.AnalyticsActiveUsersBucket'],
+		['sessionBuckets', 'session_buckets', 'sylphx.analytics.v1.AnalyticsSessionBucket'],
 	],
 	'sylphx.analytics.v1.RetentionQuery': [
 		['cohortEvent', 'cohort_event'],
@@ -479,6 +599,10 @@ runtime.registerSchemas({
 		['eventNames', 'event_names'],
 		['groupByProperties', 'group_by_properties'],
 		['sumProperty', 'sum_property'],
+		['propertyFilters', 'property_filters', undefined, 'map'],
+	],
+	'sylphx.analytics.v1.SessionsQuery': [
+		['breakdownProperty', 'breakdown_property'],
 		['propertyFilters', 'property_filters', undefined, 'map'],
 	],
 })
