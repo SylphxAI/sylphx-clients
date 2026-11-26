@@ -27,6 +27,15 @@ impl ReleaseTarget {
     /// No query overrides of host, user, database or session parameters. For
     /// a Job on a network, require the explicit direct, verified TLS URL.
     pub fn parse(url: &str) -> Result<Self> {
+        Self::parse_for(url, false)
+    }
+
+    /// The data-migrate Job accepts just one extra connection input: a CA path.
+    pub fn parse_for_data_migrate(url: &str) -> Result<Self> {
+        Self::parse_for(url, true)
+    }
+
+    fn parse_for(url: &str, data_migrate: bool) -> Result<Self> {
         let bad = || {
             "native migration needs an explicit PostgreSQL role, database and direct verify-full URL".to_string()
         };
@@ -52,10 +61,13 @@ impl ReleaseTarget {
             && matches!(pairs.as_slice(), [(key, path), (ssl, mode)] if key == "host" && path.starts_with('/') && ssl == "sslmode" && mode == "disable");
         let loopback = host == "127.0.0.1"
             && matches!(pairs.as_slice(), [(ssl, mode)] if ssl == "sslmode" && mode == "disable");
-        if !(socket
-            || loopback
-            || (parsed.password().is_some_and(|p| !p.is_empty())
-                && matches!(pairs.as_slice(), [(ssl, mode)] if ssl == "sslmode" && mode == "verify-full")))
+        let verified_tls = matches!(pairs.as_slice(), [(ssl, mode)] if ssl == "sslmode" && mode == "verify-full")
+            || data_migrate
+                && matches!(pairs.as_slice(), [(ssl, mode), (ca, _)] | [(ca, _), (ssl, mode)]
+                    if ssl == "sslmode" && mode == "verify-full" && ca == "sslrootcert");
+        if !(socket && !data_migrate
+            || loopback && !data_migrate
+            || (parsed.password().is_some_and(|p| !p.is_empty()) && verified_tls))
         {
             return Err(bad());
         }
@@ -77,7 +89,7 @@ impl ReleaseTarget {
             port: parsed.port().unwrap_or(5432),
             database: database.into(),
             role: role.into(),
-            verified_network: !socket && !loopback,
+            verified_network: verified_tls,
         })
     }
 
@@ -198,6 +210,17 @@ impl SourceTree {
             seal: self.seal_with_runtime_roles(target, &report, roles)?,
             pending,
         })
+    }
+
+    /// Revalidate the exact legacy seal without writing. The caller must retain
+    /// this dedicated session (and its writer locks) through delegated execution.
+    pub async fn verify_data_migrate_release(
+        &self,
+        db: &mut PgConnection,
+        target: &ReleaseTarget,
+        expected: &str,
+    ) -> Result<bool> {
+        postgres::verify_data_migrate_release(db, self, target, expected).await
     }
 
     pub async fn apply_release(

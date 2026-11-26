@@ -179,13 +179,7 @@ pub(super) async fn apply<'a>(
         .map_err(|_| "migration run exceeded 10m; inspect the ledger before retrying".to_string())?
 }
 
-async fn apply_locked<'a>(
-    db: &mut PgConnection,
-    tree: &'a SourceTree,
-    release: Option<(&ReleaseTarget, &str)>,
-) -> Result<Apply<'a>> {
-    let files = &tree.files;
-    let roles = &tree.runtime_roles;
+async fn lock_writer(db: &mut PgConnection) -> Result<()> {
     // A legacy writer must be fenced before cutover (it doesn't read this
     // ledger). Additionally refuse overlap with a currently running default
     // Atlas process, as well as all Sylphx runner sessions.
@@ -209,20 +203,77 @@ async fn apply_locked<'a>(
             "apply requires a dedicated migrator role without SUPERUSER or BYPASSRLS".into(),
         );
     }
-    let mut tx = db
-        .begin_with("BEGIN ISOLATION LEVEL REPEATABLE READ")
-        .await
-        .map_err(|_| "cannot start migration ledger transaction")?;
+    Ok(())
+}
+
+async fn checked_history<'a>(
+    db: &mut PgConnection,
+    tree: &'a SourceTree,
+    release: Option<(&ReleaseTarget, &str)>,
+) -> Result<(bool, Report<'a>)> {
     if let Some((target, _)) = release {
-        target.check_session(&mut tx).await?;
+        target.check_session(db).await?;
     }
-    let (initialized, report) = history(&mut tx, files).await?;
+    let (initialized, report) = history(db, &tree.files).await?;
     if let Some((target, expected)) = release {
         if tree.seal(target, &report)? != expected {
             return Err("native migration plan changed before apply; no writes made".into());
         }
     }
-    runtime_roles::verify(&mut tx, roles).await?;
+    runtime_roles::verify(db, &tree.runtime_roles).await?;
+    Ok((initialized, report))
+}
+
+pub(super) async fn verify_data_migrate_release(
+    db: &mut PgConnection,
+    tree: &SourceTree,
+    target: &ReleaseTarget,
+    expected: &str,
+) -> Result<bool> {
+    lock_writer(db).await?;
+    let mut tx = db
+        .begin_with("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY")
+        .await
+        .map_err(|_| "cannot start migration seal verification")?;
+    let owns_schema: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_namespace
+            WHERE nspname = '_data_migrate' AND nspowner = current_user::pg_catalog.regrole)",
+    )
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(|_| "cannot verify data-migrate ledger schema ownership")?;
+    if !owns_schema {
+        return Err(
+            "data-migrate requires _data_migrate to be pre-created and owned by the migrator"
+                .into(),
+        );
+    }
+    let (legacy_exists, report) = checked_history(&mut tx, tree, Some((target, expected))).await?;
+    if !legacy_exists && !report.applied.is_empty() {
+        return Err("legacy migration history must be consolidated into public._sylphx_migrations before takeover".into());
+    }
+    if tree.files.is_empty() {
+        return Err("native migration source is empty".into());
+    }
+    tx.rollback()
+        .await
+        .map_err(|_| "cannot close migration seal verification")?;
+    Ok(legacy_exists)
+}
+
+async fn apply_locked<'a>(
+    db: &mut PgConnection,
+    tree: &'a SourceTree,
+    release: Option<(&ReleaseTarget, &str)>,
+) -> Result<Apply<'a>> {
+    let files = &tree.files;
+    let roles = &tree.runtime_roles;
+    lock_writer(db).await?;
+    let mut tx = db
+        .begin_with("BEGIN ISOLATION LEVEL REPEATABLE READ")
+        .await
+        .map_err(|_| "cannot start migration ledger transaction")?;
+    let (initialized, report) = checked_history(&mut tx, tree, release).await?;
     let mut diagnostics = Vec::new();
     let mut pending = Vec::new();
     for m in files

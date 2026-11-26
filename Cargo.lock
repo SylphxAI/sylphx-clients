@@ -2955,7 +2955,7 @@ dependencies = [
 
 [[package]]
 name = "sylphx-cli"
-version = "0.29.69"
+version = "0.29.70"
 dependencies = [
  "base64 0.23.1",
  "clap",
@@ -2968,6 +2968,7 @@ dependencies = [
  "keyring",
  "libc",
  "parking_lot",
+ "percent-encoding",
  "prost",
  "reqwest",
  "serde",
@@ -2981,8 +2982,10 @@ dependencies = [
  "sylphx-mcp",
  "sylphx-migrate",
  "sylphx-resource-codec",
+ "tempfile",
  "tokio",
  "toml",
+ "url",
 ]
 
 [[package]]
@@ -3013,7 +3016,7 @@ dependencies = [
 
 [[package]]
 name = "sylphx-migrate"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "base64 0.22.1",
  "serde",

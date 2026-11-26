@@ -1,4 +1,6 @@
 //! Local PostgreSQL migration porcelain.
+mod data_migrate;
+
 use crate::Failure;
 use clap::{value_parser, Arg, ArgMatches, Command};
 use serde::Deserialize;
@@ -53,6 +55,12 @@ pub(crate) fn command() -> Command {
             Command::new("apply")
                 .about("Lint and execute pending SQL against DATABASE_URL")
                 .arg(Arg::new("release-seal").long("release-seal").hide(true))
+                .arg(
+                    Arg::new("engine")
+                        .long("engine")
+                        .value_parser(["data-migrate"])
+                        .help("Use the canonical data-migrate binary (sealed Release Jobs only)"),
+                )
                 .arg(runtime_role_arg()),
             Command::new("status").about("Read target history and reconcile it with local SQL"),
         ])
@@ -139,6 +147,19 @@ pub(crate) async fn run(args: &ArgMatches) -> std::result::Result<(), Failure> {
         )
         .map_err(Failure::Usage)?,
     };
+    if action == "apply" && args.get_one::<String>("engine").is_some() {
+        let seal = args.get_one::<String>("release-seal").map(String::as_str);
+        let roles = runtime_roles(args, std::env::var_os("SYLPHX_MIGRATE_RUNTIME_ROLES"))
+            .map_err(Failure::Usage)?;
+        return data_migrate::run(
+            seal,
+            &dir,
+            args.get_one::<PathBuf>("legacy-lint-baseline")
+                .map(PathBuf::as_path),
+            roles,
+        )
+        .await;
+    }
     let files = SourceTree::load(
         &dir,
         args.get_one::<PathBuf>("legacy-lint-baseline")

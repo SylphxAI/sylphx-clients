@@ -123,6 +123,13 @@ impl SourceTree {
         self
     }
 
+    /// The already-validated forward SQL bytes bound by a Release seal.
+    pub fn forward_sql(&self) -> impl Iterator<Item = (&str, &str)> {
+        self.files
+            .values()
+            .map(|m| (m.file.as_str(), m.sql.as_str()))
+    }
+
     pub fn lint(&self) -> Vec<Diagnostic<'_>> {
         self.files
             .values()
