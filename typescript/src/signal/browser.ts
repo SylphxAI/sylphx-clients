@@ -19,6 +19,7 @@ import {
 	type SignalConsentChoice,
 	type SignalPrivacy,
 } from './consent.js'
+import { trackEngagement } from './engagement.js'
 
 export interface SignalGoogleConsent {
 	/** Basic never loads the tag before grant; Advanced permits denied cookieless pings. Default: Basic. */
@@ -40,6 +41,8 @@ export interface SignalBrowserOptions {
 	storageKey?: string
 	google?: SignalGoogleConsent
 	ingest?: SignalIngestOptions
+	/** Track visible, active time after an explicit analytics grant. Default: false. */
+	engagement?: boolean
 }
 
 export interface SignalIngestOptions {
@@ -274,6 +277,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 		const before = privacy.storedChoice
 		privacy.storedChoice = storedChoice()
 		if ((before === 'granted' || before === 'analytics_only') && privacy.storedChoice === undefined) {
+			engagement?.reset()
 			// A removed opt-in must not carry identity or prepared events into regional defaults.
 			collectionEpoch++
 			cancelRetries()
@@ -284,6 +288,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 	}
 
 	function clearCollection() {
+		engagement?.reset()
 		collectionEpoch++
 		cancelRetries()
 		pendingTouch = undefined
@@ -545,6 +550,13 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 		}
 	}
 
+	const engagement =
+		options.engagement === true && endpoint
+			? trackEngagement(
+					() => canSend(false) && privacy.storedChoice !== undefined,
+					(path, ms) => void emitEvents([{ eventName: 'engagement', properties: { path, engaged_ms: ms } }], {}),
+				)
+			: undefined
 	capture()
 	const ready = regionPending
 		? detectSignalRegion().then((region) => {
@@ -590,6 +602,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 		},
 		/** Clear stored and in-memory identity and page-view dedupe on logout, without changing consent. */
 		reset(): void {
+			engagement?.reset()
 			collectionEpoch++
 			cancelRetries()
 			distinctId = undefined
@@ -645,6 +658,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 			})
 		},
 		dispose() {
+			engagement?.dispose()
 			disposed = true
 			cancelRetries()
 			pendingTouch = undefined
