@@ -121,6 +121,7 @@ func authOauthClientSpec() []def.Field {
 		{Name: "backchannel_logout_uri", Kind: def.String, Doc: "Optional HTTPS endpoint for OpenID Connect Back-Channel Logout. Clear it with an explicit update mask."},
 		{Name: "backchannel_logout_session_required", Kind: def.Bool, Doc: "Require a session ID in Logout Tokens. Auth always sends a session ID."},
 		{Name: "access_token_format", Kind: def.String, Doc: "Access token format for PKCE grants to resource_uri: opaque (default) or jwt."},
+		{Name: "allowed_app_metadata_claims", Kind: def.String, Repeated: true, Doc: "End-user public metadata keys allowed under app_metadata in ID tokens and UserInfo. JWT access tokens require opt-in from both the requesting client and the bound resource client. Empty (default) shares no keys; clear with an explicit update mask. Keys are case-sensitive."},
 	}
 }
 

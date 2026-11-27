@@ -1165,6 +1165,13 @@ export interface OauthClientSpec {
 	backchannelLogoutSessionRequired?: boolean
 	/** Access token format for PKCE grants to resource_uri: opaque (default) or jwt. */
 	accessTokenFormat?: string
+	/**
+	 * End-user public metadata keys allowed under app_metadata in ID tokens and
+	 * UserInfo. JWT access tokens require opt-in from both the requesting client
+	 * and the bound resource client. Empty (default) shares no keys; clear with
+	 * an explicit update mask. Keys are case-sensitive.
+	 */
+	allowedAppMetadataClaims?: string[]
 }
 
 /** OauthClientStatus is the observed state of an OauthClient. */
@@ -2005,6 +2012,7 @@ runtime.registerSchemas({
 		['backchannelLogoutUri', 'backchannel_logout_uri'],
 		['backchannelLogoutSessionRequired', 'backchannel_logout_session_required'],
 		['accessTokenFormat', 'access_token_format'],
+		['allowedAppMetadataClaims', 'allowed_app_metadata_claims'],
 	],
 	'sylphx.auth.v1.OauthClientStatus': [
 		['observedGeneration', 'observed_generation'],

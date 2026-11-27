@@ -7415,6 +7415,13 @@
                   "type": "string"
                 },
                 {
+                  "field": "oauth_client.spec.allowed_app_metadata_claims",
+                  "flag": "--spec.allowed-app-metadata-claims",
+                  "repeated": true,
+                  "summary": "End-user public metadata keys allowed under app_metadata in ID tokens and UserInfo. JWT access tokens require opt-in from both the requesting client and the bound resource client. Empty (default) shares no keys; clear with an explicit update mask. Keys are case-sensitive.",
+                  "type": "string"
+                },
+                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -7543,6 +7550,13 @@
                   "field": "oauth_client.spec.access_token_format",
                   "flag": "--spec.access-token-format",
                   "summary": "Access token format for PKCE grants to resource_uri: opaque (default) or jwt.",
+                  "type": "string"
+                },
+                {
+                  "field": "oauth_client.spec.allowed_app_metadata_claims",
+                  "flag": "--spec.allowed-app-metadata-claims",
+                  "repeated": true,
+                  "summary": "End-user public metadata keys allowed under app_metadata in ID tokens and UserInfo. JWT access tokens require opt-in from both the requesting client and the bound resource client. Empty (default) shares no keys; clear with an explicit update mask. Keys are case-sensitive.",
                   "type": "string"
                 },
                 {

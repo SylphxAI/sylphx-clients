@@ -2623,6 +2623,16 @@ pub struct OauthClientSpec {
         alias = "accessTokenFormat"
     )]
     pub access_token_format: String,
+    /// End-user public metadata keys allowed under app_metadata in ID tokens and
+    /// UserInfo. JWT access tokens require opt-in from both the requesting client
+    /// and the bound resource client. Empty (default) shares no keys; clear with
+    /// an explicit update mask. Keys are case-sensitive.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "allowedAppMetadataClaims"
+    )]
+    pub allowed_app_metadata_claims: Vec<String>,
 }
 
 /// OauthClientStatus is the observed state of an OauthClient.
