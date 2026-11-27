@@ -1,6 +1,6 @@
 [package]
 name = "sylphx-cli"
-version = "0.29.71"
+version = "0.29.72"
 description = "The Sylphx CLI: every Sylphx API method as a command, generated from the Sylphx schema registry."
 keywords = ["sylphx", "cli", "cloud", "deploy"]
 categories = ["command-line-utilities"]
@@ -19,7 +19,7 @@ path = "src/main.rs"
 sylphx = { path = "../rust", version = "0.3.51" }
 sylphx-resource-codec = { path = "../resource-codec", version = "0.1.47" }
 sylphx-apply = { path = "../apply", version = "0.1.47" }
-sylphx-mcp = { path = "../mcp", version = "0.29.71" }
+sylphx-mcp = { path = "../mcp", version = "0.29.72" }
 sylphx-build-lease = { path = "../build-lease", version = "0.1.49" }
 sylphx-migrate = { path = "../migrate", version = "0.1.5" }
 base64 = "0.23.1"
