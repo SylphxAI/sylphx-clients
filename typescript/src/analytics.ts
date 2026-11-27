@@ -324,6 +324,25 @@ export interface FunnelQuery {
 	limit?: number
 	/** Unit to count at each step. Omit to count subjects. */
 	countBy?: FunnelCountBy
+	/**
+	 * Optional per-step property filters, at most one entry per step and at most
+	 * 16 total key/value pairs across the funnel.
+	 */
+	stepFilters?: FunnelStepFilter[]
+}
+
+/**
+ * Exact string property matches required on one funnel step in addition to
+ * any query-level property_filters.
+ */
+export interface FunnelStepFilter {
+	/** Zero-based index into FunnelQuery.steps. Each step_index may appear at most once. */
+	stepIndex?: number
+	/**
+	 * One to four exact string matches, all required on this step. Keys match
+	 * ^[A-Za-z_][A-Za-z0-9_.]{0,63}$; values are at most 128 bytes.
+	 */
+	propertyFilters?: Record<string, string>
 }
 
 /** The request of ListAnalyticsEvents. */
@@ -645,6 +664,11 @@ runtime.registerSchemas({
 		['breakdownProperty', 'breakdown_property'],
 		['propertyFilters', 'property_filters', undefined, 'map'],
 		['countBy', 'count_by'],
+		['stepFilters', 'step_filters', 'sylphx.analytics.v1.FunnelStepFilter'],
+	],
+	'sylphx.analytics.v1.FunnelStepFilter': [
+		['stepIndex', 'step_index'],
+		['propertyFilters', 'property_filters', undefined, 'map'],
 	],
 	'sylphx.analytics.v1.ListAnalyticsEventsRequest': [
 		['startTime', 'start_time'],

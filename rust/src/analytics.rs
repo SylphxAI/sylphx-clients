@@ -620,6 +620,36 @@ pub struct FunnelQuery {
     /// Unit to count at each step. Omit to count subjects.
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "countBy")]
     pub count_by: Option<FunnelCountBy>,
+    /// Optional per-step property filters, at most one entry per step and at most
+    /// 16 total key/value pairs across the funnel.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "stepFilters")]
+    pub step_filters: Vec<FunnelStepFilter>,
+}
+
+/// Exact string property matches required on one funnel step in addition to
+/// any query-level property_filters.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct FunnelStepFilter {
+    /// Zero-based index into FunnelQuery.steps. Each step_index may appear at most once.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "stepIndex"
+    )]
+    pub step_index: i32,
+    /// One to four exact string matches, all required on this step. Keys match
+    /// ^[A-Za-z_][A-Za-z0-9_.]{0,63}$; values are at most 128 bytes.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "std::collections::BTreeMap::is_empty",
+        alias = "propertyFilters"
+    )]
+    pub property_filters: std::collections::BTreeMap<String, String>,
 }
 
 /// The request of ListAnalyticsEvents.

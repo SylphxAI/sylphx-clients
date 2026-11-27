@@ -6938,6 +6938,35 @@
                 "description": "Up to four exact string matches, all of which must hold on every step.\nKeys use the same grammar as breakdown_property; values are at most 128 bytes.",
                 "type": "object"
               },
+              "step_filters": {
+                "description": "Optional per-step property filters, at most one entry per step and at most\n16 total key/value pairs across the funnel.",
+                "items": {
+                  "additionalProperties": false,
+                  "description": "Exact string property matches required on one funnel step in addition to\nany query-level property_filters.",
+                  "properties": {
+                    "property_filters": {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "description": "One to four exact string matches, all required on this step. Keys match\n^[A-Za-z_][A-Za-z0-9_.]{0,63}$; values are at most 128 bytes.",
+                      "type": "object"
+                    },
+                    "step_index": {
+                      "description": "Zero-based index into FunnelQuery.steps. Each step_index may appear at most once.",
+                      "format": "int32",
+                      "maximum": 15,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "step_index",
+                    "property_filters"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
               "steps": {
                 "description": "Two to 16 event names in step order. Each step must occur at a strictly\nlater event timestamp than the prior step, inside the query interval.",
                 "items": {
@@ -54033,6 +54062,35 @@
                 },
                 "description": "Up to four exact string matches, all of which must hold on every step.\nKeys use the same grammar as breakdown_property; values are at most 128 bytes.",
                 "type": "object"
+              },
+              "step_filters": {
+                "description": "Optional per-step property filters, at most one entry per step and at most\n16 total key/value pairs across the funnel.",
+                "items": {
+                  "additionalProperties": false,
+                  "description": "Exact string property matches required on one funnel step in addition to\nany query-level property_filters.",
+                  "properties": {
+                    "property_filters": {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "description": "One to four exact string matches, all required on this step. Keys match\n^[A-Za-z_][A-Za-z0-9_.]{0,63}$; values are at most 128 bytes.",
+                      "type": "object"
+                    },
+                    "step_index": {
+                      "description": "Zero-based index into FunnelQuery.steps. Each step_index may appear at most once.",
+                      "format": "int32",
+                      "maximum": 15,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "step_index",
+                    "property_filters"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
               },
               "steps": {
                 "description": "Two to 16 event names in step order. Each step must occur at a strictly\nlater event timestamp than the prior step, inside the query interval.",

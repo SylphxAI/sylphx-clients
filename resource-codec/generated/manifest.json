@@ -23703,9 +23703,82 @@
             "kind": "enum",
             "name": "sylphx.analytics.v1.FunnelCountBy"
           }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Optional per-step property filters, at most one entry per step and at most\n16 total key/value pairs across the funnel.",
+          "filterable": false,
+          "name": "step_filters",
+          "number": 7,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.analytics.v1.FunnelStepFilter"
+          }
         }
       ],
       "name": "sylphx.analytics.v1.FunnelQuery",
+      "package": "sylphx.analytics.v1"
+    },
+    {
+      "doc": "Exact string property matches required on one funnel step in addition to\nany query-level property_filters.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Zero-based index into FunnelQuery.steps. Each step_index may appear at most once.",
+          "filterable": false,
+          "name": "step_index",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 15,
+              "minimum": 0
+            }
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "One to four exact string matches, all required on this step. Keys match\n^[A-Za-z_][A-Za-z0-9_.]{0,63}$; values are at most 128 bytes.",
+          "filterable": false,
+          "name": "property_filters",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "map",
+            "value": {
+              "kind": "scalar",
+              "scalar": "string"
+            }
+          }
+        }
+      ],
+      "name": "sylphx.analytics.v1.FunnelStepFilter",
       "package": "sylphx.analytics.v1"
     },
     {

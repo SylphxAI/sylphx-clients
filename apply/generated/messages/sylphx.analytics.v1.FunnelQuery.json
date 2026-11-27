@@ -110,6 +110,24 @@
         "kind": "enum",
         "name": "sylphx.analytics.v1.FunnelCountBy"
       }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "step_filters",
+      "number": 7,
+      "oneof": null,
+      "optional": false,
+      "repeated": true,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "message",
+        "name": "sylphx.analytics.v1.FunnelStepFilter"
+      }
     }
   ],
   "name": "sylphx.analytics.v1.FunnelQuery",
