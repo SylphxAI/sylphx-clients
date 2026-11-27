@@ -32,10 +32,17 @@ export function trackEngagement(allowed: () => boolean, emit: (path: string, ms:
 		emit(path, ms)
 	}
 
+	function finishPath() {
+		// Keep verified samples, not the unobserved gap at the route transition.
+		flush()
+		reset()
+	}
+
 	function tick() {
 		timer = undefined
-		if (!allowed() || path !== window.location.pathname) return reset()
+		if (!allowed()) return reset()
 		if (document.visibilityState !== 'visible') return
+		if (path !== window.location.pathname) return finishPath()
 		const now = performance.now()
 		sample(now)
 		if (now <= activeUntil) flush()
@@ -45,8 +52,10 @@ export function trackEngagement(allowed: () => boolean, emit: (path: string, ms:
 	function onInput(event: Event) {
 		if (!event.isTrusted || suspended || document.visibilityState !== 'visible') return
 		if (!allowed()) return reset()
-		// Never attribute an unobserved SPA route transition to either pathname.
-		if (path !== window.location.pathname) reset()
+		if (path !== window.location.pathname) {
+			finishPath()
+			if (signal.aborted || !allowed()) return
+		}
 		path = window.location.pathname
 		const now = performance.now()
 		sample(now)
@@ -55,9 +64,9 @@ export function trackEngagement(allowed: () => boolean, emit: (path: string, ms:
 	}
 
 	function onHide() {
-		if (activeUntil && allowed() && path === window.location.pathname) {
-			sample(performance.now())
-			flush()
+		if (activeUntil && allowed()) {
+			if (path === window.location.pathname) sample(performance.now())
+			return finishPath()
 		}
 		reset()
 	}

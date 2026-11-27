@@ -28,8 +28,14 @@ function setup(engagement?: true, retry = false) {
 		setItem: values.set.bind(values),
 		removeItem: values.delete.bind(values),
 	}
+	const location = new URL('https://example.com/play?q=1#part')
 	const win = Object.assign(new BrowserEvents(), {
-		location: new URL('https://example.com/play?q=1#part'),
+		location,
+		history: {
+			pushState: (_state: unknown, _unused: string, url: string) => {
+				location.href = new URL(url, location).href
+			},
+		},
 		localStorage: storage,
 		sessionStorage: storage,
 	})
@@ -161,5 +167,31 @@ test('drops sub-second exits and stops measuring at 60 logical events', () => {
 	}
 	expect(bodies).toHaveLength(60)
 	expect(jest.getTimerCount()).toBe(0)
+	sdk.dispose()
+})
+
+test.each([
+	'input',
+	'tick',
+	'hide',
+])('flushes only sampled time on a route change detected by %s', (detect) => {
+	const { sdk, win, visible, bodies, event } = setup(true)
+	sdk.setConsent('analytics_only')
+	win.history.pushState(null, '', '/a')
+	win.fire('keydown')
+	advance(10_000)
+	win.fire('pointerdown')
+	advance(2_000)
+	win.history.pushState(null, '', '/b?q=1#part')
+	if (detect === 'tick') advance(3_000)
+	if (detect === 'hide') visible(false)
+	visible(true)
+	win.fire('keydown')
+	expect(bodies).toHaveLength(1)
+	expect(event(0).properties).toEqual({ path: '/a', engaged_ms: 10_000 })
+	advance(1_500)
+	win.fire('pagehide')
+	expect(bodies).toHaveLength(2)
+	expect(event(1).properties).toEqual({ path: '/b', engaged_ms: 1_500 })
 	sdk.dispose()
 })
