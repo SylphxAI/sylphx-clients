@@ -645,6 +645,14 @@ export interface CheckoutSession {
 	readonly claimSecret?: string
 	/** When the browser possession proof expires. The existing wire name is retained. */
 	readonly claimSecretExpiresAt?: string
+	/**
+	 * The purchase's one transaction id once the checkout is paid: a
+	 * subscription checkout's processor invoice, else the processor payment
+	 * (else invoice, else session). It equals `checkout_sessions:redeem`
+	 * `transaction_id` and `money.checkout.settled` `order_id`, so browser and
+	 * server conversions deduplicate. Empty before the checkout is paid.
+	 */
+	readonly transactionId?: string
 }
 
 /** Request to claim dispatch using the reserved hold. */
@@ -3665,6 +3673,7 @@ runtime.registerSchemas({
 		['claimMethod', 'claim_method'],
 		['claimSecret', 'claim_secret'],
 		['claimSecretExpiresAt', 'claim_secret_expires_at'],
+		['transactionId', 'transaction_id'],
 	],
 	'sylphx.money.v1.ClaimPlatformUsageHoldRequest': [
 		['payerOrg', 'payer_org'],

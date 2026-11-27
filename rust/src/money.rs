@@ -1460,6 +1460,19 @@ pub struct CheckoutSession {
         alias = "claimSecretExpiresAt"
     )]
     pub claim_secret_expires_at: String,
+    /// The purchase's one transaction id once the checkout is paid: a
+    /// subscription checkout's processor invoice, else the processor payment
+    /// (else invoice, else session). It equals `checkout_sessions:redeem`
+    /// `transaction_id` and `money.checkout.settled` `order_id`, so browser and
+    /// server conversions deduplicate. Empty before the checkout is paid.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "transactionId"
+    )]
+    pub transaction_id: String,
 }
 
 /// Request to claim dispatch using the reserved hold.

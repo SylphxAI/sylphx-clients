@@ -92844,6 +92844,25 @@
             "kind": "well_known",
             "wkt": "timestamp"
           }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The purchase's one transaction id once the checkout is paid: a\nsubscription checkout's processor invoice, else the processor payment\n(else invoice, else session). It equals `checkout_sessions:redeem`\n`transaction_id` and `money.checkout.settled` `order_id`, so browser and\nserver conversions deduplicate. Empty before the checkout is paid.",
+          "filterable": false,
+          "name": "transaction_id",
+          "number": 49,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
         }
       ],
       "name": "sylphx.money.v1.CheckoutSession",

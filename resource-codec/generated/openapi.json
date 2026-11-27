@@ -30329,6 +30329,11 @@
             "type": "string",
             "x-sylphx-immutable": true
           },
+          "transaction_id": {
+            "description": "The purchase's one transaction id once the checkout is paid: a\nsubscription checkout's processor invoice, else the processor payment\n(else invoice, else session). It equals `checkout_sessions:redeem`\n`transaction_id` and `money.checkout.settled` `order_id`, so browser and\nserver conversions deduplicate. Empty before the checkout is paid.",
+            "readOnly": true,
+            "type": "string"
+          },
           "uid": {
             "description": "`chk_<cell><ulid>`; never reused.",
             "readOnly": true,
