@@ -17,6 +17,7 @@ export {
 	type SignalBrowserOptions,
 	type SignalEventInput,
 	type SignalGoogleConsent,
+	type SignalHeartbeatOptions,
 	type SignalIngestOptions,
 	type SignalPageViewOptions,
 } from './signal/browser.js'

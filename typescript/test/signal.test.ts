@@ -1747,6 +1747,158 @@ for (const method of ['track', 'trackBatch'] as const) {
 	})
 }
 
+describe('Signal browser foreground heartbeats', () => {
+	afterEach(() => jest.useRealTimers())
+	function foreground() {
+		jest.useFakeTimers()
+		const env = browser()
+		const doc = Object.assign(new EventTarget(), { visibilityState: 'visible' })
+		override('document', doc)
+		let now = 0
+		override('performance', { now: () => now })
+		return {
+			...env,
+			...ingestTransport(),
+			advance(ms: number, elapsed = ms) {
+				now += elapsed
+				jest.advanceTimersByTime(ms)
+			},
+			visibility(state: string) {
+				doc.visibilityState = state
+				doc.dispatchEvent(new Event('visibilitychange'))
+			},
+		}
+	}
+	test.each([
+		[undefined, true],
+		[false, true],
+		[true, false],
+	] as const)('is inactive with heartbeat=%s and ingest=%s', (heartbeat, hasEndpoint) => {
+		const { ingest, calls, advance, win } = foreground()
+		const options = { region: 'US', heartbeat }
+		const signal = createSignalBrowser(hasEndpoint ? { ...options, ingest } : options)
+		advance(300_000)
+		win.dispatchEvent(new Event('pagehide'))
+		expect(jest.getTimerCount()).toBe(0)
+		expect(calls).toHaveLength(0)
+		signal.dispose()
+	})
+	test.each([
+		[true, 60_000],
+		[{}, 60_000],
+		[{ intervalSeconds: Infinity }, 60_000],
+		[{ intervalSeconds: 22 }, 22_000],
+		[{ intervalSeconds: 5 }, 15_000],
+		[{ intervalSeconds: 600 }, 300_000],
+	] as const)('uses the configured, default or clamped interval (%j)', (heartbeat, ms) => {
+		const { ingest, calls, batches, advance } = foreground()
+		const signal = createSignalBrowser({ region: 'US', ingest, heartbeat })
+		advance(ms - 1)
+		expect(calls).toHaveLength(0)
+		advance(1)
+		advance(ms, 100_000_000)
+		const events = batches().flatMap((batch) => batch.events)
+		expect(events.map(({ event_name, properties }) => [event_name, properties])).toEqual([
+			['$heartbeat', { fg_ms: ms }],
+			['$heartbeat', { fg_ms: 86_400_000 }],
+		])
+		signal.dispose()
+	})
+	test('flushes once per hide and excludes hidden and suspended time', () => {
+		const { ingest, batches, advance, visibility, win } = foreground()
+		const signal = createSignalBrowser({ region: 'US', ingest, heartbeat: true })
+		advance(1_234, 1_234.6)
+		visibility('hidden')
+		win.dispatchEvent(new Event('pagehide'))
+		expect(jest.getTimerCount()).toBe(0)
+		advance(60_000)
+		visibility('visible')
+		advance(2_345)
+		win.dispatchEvent(new Event('pagehide'))
+		win.dispatchEvent(new Event('pagehide'))
+		advance(60_000)
+		win.dispatchEvent(new Event('pageshow'))
+		advance(60_000)
+		const durations = batches().map((batch) => batch.events[0].properties.fg_ms)
+		expect(durations).toEqual([1_235, 2_345, 60_000])
+		signal.dispose()
+	})
+	test.each(['denied', 'storage', 'reset', 'dispose'])('discards on %s', (action) => {
+		const { ingest, batches, calls, advance, values, win, visibility } = foreground()
+		const signal = createSignalBrowser({ requireExplicitConsent: true, ingest, heartbeat: true })
+		advance(60_000)
+		expect(jest.getTimerCount()).toBe(0)
+		signal.setConsent('analytics_only')
+		advance(60_000)
+		expect(batches()[0].events[0].properties).toEqual({ fg_ms: 60_000 })
+		advance(5_000)
+		if (action === 'denied') signal.setConsent('denied')
+		if (action === 'storage') {
+			values.delete(consentStorageSlot)
+			win.dispatchEvent(Object.assign(new Event('storage'), { key: consentStorageSlot }))
+		}
+		if (action === 'reset') signal.reset()
+		if (action === 'dispose') signal.dispose()
+		expect(jest.getTimerCount()).toBe(0)
+		visibility('hidden')
+		advance(60_000)
+		expect(calls).toHaveLength(1)
+		if (action !== 'dispose') signal.setConsent('analytics_only')
+		visibility('visible')
+		advance(60_000)
+		const durations = batches().map((batch) => batch.events[0].properties.fg_ms)
+		expect(durations).toEqual(action === 'dispose' ? [60_000] : [60_000, 60_000])
+		signal.dispose()
+	})
+	test('waits for region resolution despite a stored grant and stops under GPC', async () => {
+		const { ingest, batches, calls, advance, values, nav } = foreground()
+		values.set(consentStorageSlot, 'granted')
+		const trace = Promise.withResolvers<Response>()
+		override('fetch', () => trace.promise)
+		const signal = createSignalBrowser({ ingest, heartbeat: true })
+		advance(60_000)
+		expect(calls).toHaveLength(0)
+		trace.resolve(new Response('loc=US\n'))
+		await signal.ready
+		advance(60_000)
+		expect(batches()[0].events[0].properties).toEqual({ fg_ms: 60_000 })
+		nav.globalPrivacyControl = true
+		advance(60_000)
+		expect(calls).toHaveLength(1)
+		expect(jest.getTimerCount()).toBe(0)
+		signal.dispose()
+	})
+	test('shares the active anonymous identity, session and erasure commitment', async () => {
+		const { ingest, calls, batches, advance } = foreground()
+		const sent = Promise.withResolvers<void>()
+		const fetcher = ((url, init) => {
+			const response = ingest.fetch?.(url, init)
+			if (calls.length === 2) sent.resolve()
+			return response
+		}) as typeof fetch
+		const signal = createSignalBrowser({
+			requireExplicitConsent: true,
+			heartbeat: true,
+			ingest: { ...ingest, fetch: fetcher, linkAnonymousForErasure: true },
+		})
+		signal.setConsent('analytics_only')
+		expect(await signal.track({ eventName: '$heartbeat' })).toBe(false)
+		expect(await signal.track({ eventName: 'visit' })).toBe(true)
+		advance(60_000)
+		await sent.promise
+		const [first, second] = batches().map((batch) => batch.events[0])
+		expect(first.anonymous_commitment).toMatch(/^[a-f0-9]{64}$/)
+		expect(second).toMatchObject({
+			event_name: '$heartbeat',
+			properties: { fg_ms: 60_000 },
+			distinct_id: first.distinct_id,
+			session_id: first.session_id,
+			anonymous_commitment: first.anonymous_commitment,
+		})
+		signal.dispose()
+	})
+})
+
 describe('Signal browser ingest retries', () => {
 	afterEach(() => {
 		jest.useRealTimers()

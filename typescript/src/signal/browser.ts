@@ -21,6 +21,7 @@ import {
 	type SignalPrivacy,
 } from './consent.js'
 import { trackEngagement } from './engagement.js'
+import { heartbeatEventName, trackHeartbeat } from './heartbeat.js'
 
 export interface SignalGoogleConsent {
 	/** Basic never loads the tag before grant; Advanced permits denied cookieless pings. Default: Basic. */
@@ -48,6 +49,13 @@ export interface SignalBrowserOptions {
 	ingest?: SignalIngestOptions
 	/** Track visible, active time after an explicit analytics grant. Default: false. */
 	engagement?: boolean
+	/** Opt in to periodic foreground time measurement after analytics consent. Off by default. */
+	heartbeat?: boolean | SignalHeartbeatOptions
+}
+
+export interface SignalHeartbeatOptions {
+	/** Seconds between foreground heartbeats; defaults to 60, clamped to 15–300. */
+	intervalSeconds?: number
 }
 
 export interface SignalIngestOptions {
@@ -293,7 +301,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 	let promotedRoute: string | undefined
 	let choiceOverride: SignalConsentChoice | undefined
 	let current: { expiresAt: number; touch: SignalAttribution } | undefined
-	const regionPending = !requireExplicitConsent && options.region === undefined && !hasGpc(privacy)
+	let regionPending = !requireExplicitConsent && options.region === undefined && !hasGpc(privacy)
 	let loaded = false
 	let disposed = false
 	// A later grant must not revive events prepared before consent was withdrawn.
@@ -336,6 +344,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 		privacy.storedChoice = storedChoice()
 		if ((before === 'granted' || before === 'analytics_only') && privacy.storedChoice === undefined) {
 			engagement?.reset()
+			heartbeat?.reset()
 			// A removed opt-in must not carry identity or prepared events into regional defaults.
 			collectionEpoch++
 			mark = undefined
@@ -348,6 +357,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 
 	function clearCollection() {
 		engagement?.reset()
+		heartbeat?.reset()
 		collectionEpoch++
 		mark = undefined
 		cancelRetries()
@@ -535,6 +545,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 		events: readonly SignalEventInput[],
 		attribution?: SignalAttribution,
 		path?: string,
+		allowHeartbeat = false,
 	): Promise<boolean> {
 		if (disposed || !ingest || !endpoint) return false
 		let finishMark: (() => void) | undefined
@@ -555,7 +566,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 				if (!event) return false
 				const { eventName, eventId, eventTime, properties, numericValue, isError, latencyMs } = event
 				if (
-					!isEventIdentifier(eventName) ||
+					(!isEventIdentifier(eventName) && !(allowHeartbeat && eventName === heartbeatEventName)) ||
 					(eventId !== undefined && !isEventIdentifier(eventId)) ||
 					(numericValue !== undefined && !Number.isFinite(numericValue)) ||
 					(latencyMs !== undefined && (!Number.isFinite(latencyMs) || latencyMs < 0))
@@ -678,6 +689,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 			pendingPath = undefined
 			void emitPage(new URL(window.location.href), attribution)
 		}
+		heartbeat?.sync()
 	}
 
 	const engagement =
@@ -687,11 +699,21 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 					(path, ms) => void emitEvents([{ eventName: 'engagement', properties: { path, engaged_ms: ms } }], {}),
 				)
 			: undefined
+	const heartbeat =
+		endpoint && options.heartbeat
+			? trackHeartbeat(
+					typeof options.heartbeat === 'object' ? options.heartbeat.intervalSeconds : undefined,
+					() => !regionPending && canSend(false),
+					(fgMs) => void emitEvents([{ eventName: heartbeatEventName, properties: { fg_ms: fgMs } }], {}, undefined, true),
+				)
+			: undefined
 	capture()
+	heartbeat?.sync()
 	const ready = regionPending
 		? detectSignalRegion().then((region) => {
 				if (disposed) return
 				privacy.region = region
+				regionPending = false
 				refresh()
 			})
 		: Promise.resolve()
@@ -737,6 +759,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 		/** Clear stored and in-memory identity and page-view dedupe on logout, without changing consent. */
 		reset(): void {
 			engagement?.reset()
+			heartbeat?.reset()
 			collectionEpoch++
 			mark = undefined
 			cancelRetries()
@@ -795,6 +818,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 		},
 		dispose() {
 			engagement?.dispose()
+			heartbeat?.dispose()
 			disposed = true
 			mark = undefined
 			cancelRetries()
