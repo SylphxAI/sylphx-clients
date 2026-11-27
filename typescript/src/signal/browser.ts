@@ -60,6 +60,8 @@ export interface SignalIngestOptions {
 	distinctId?: string
 	/** Override the generated session ID. The supplied ID is never persisted by Signal. */
 	sessionId?: string
+	/** Enable proof-linked erasure only after the ingest environment supports it. Default: false. */
+	linkAnonymousForErasure?: boolean
 }
 
 export interface SignalEventInput {
@@ -139,7 +141,7 @@ function identitySlot(storage: 'localStorage' | 'sessionStorage', key: string) {
 	}
 
 	return {
-		next(now: number, persist: boolean): string {
+		next(now: number, persist: boolean, onMint?: (id: string) => void): string {
 			let current = fresh(memory, now) ? memory : undefined
 			if (persist) {
 				try {
@@ -172,6 +174,7 @@ function identitySlot(storage: 'localStorage' | 'sessionStorage', key: string) {
 				id: current?.id ?? crypto.randomUUID(),
 				timestamp: storage === 'localStorage' ? (current?.timestamp ?? now) : now,
 			}
+			if (!current) onMint?.(memory.id)
 			saved = false
 			if (persist && !pendingRemoval) {
 				try {
@@ -214,6 +217,36 @@ function retryDelay(headers: Headers): number {
 	return seconds * 1000
 }
 
+function toHex(bytes: Uint8Array): string {
+	return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
+}
+
+interface AnonymousMark {
+	id: string
+	proof: string
+	commitment: Promise<string | undefined>
+	pending: Set<Promise<void>>
+	acknowledged: boolean
+}
+
+function anonymousMark(id: string): AnonymousMark | undefined {
+	try {
+		const bytes = crypto.getRandomValues(new Uint8Array(32))
+		return {
+			id,
+			proof: toHex(bytes),
+			commitment: crypto.subtle.digest('SHA-256', bytes).then(
+				(digest) => toHex(new Uint8Array(digest)),
+				() => undefined,
+			),
+			pending: new Set(),
+			acknowledged: false,
+		}
+	} catch {
+		return undefined
+	}
+}
+
 function allowsAds(consent: SignalConsent): boolean {
 	return consent.ad_storage === 'granted' && consent.ad_user_data === 'granted'
 }
@@ -242,6 +275,8 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 	const projectAttribution = options.projectAttribution
 	const ingest = options.ingest && { ...options.ingest }
 	const endpoint = ingest && ingestEndpoint(ingest)
+	let mark: AnonymousMark | undefined
+	let identifyEpoch = 0
 	let distinctId = ingest?.distinctId
 	let pendingTouch: SignalAttribution | undefined
 	let pendingPath: string | undefined
@@ -294,6 +329,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 			engagement?.reset()
 			// A removed opt-in must not carry identity or prepared events into regional defaults.
 			collectionEpoch++
+			mark = undefined
 			cancelRetries()
 			anonymous.clear()
 			session.clear()
@@ -304,6 +340,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 	function clearCollection() {
 		engagement?.reset()
 		collectionEpoch++
+		mark = undefined
 		cancelRetries()
 		pendingTouch = undefined
 		pendingPath = undefined
@@ -452,12 +489,46 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 		return canIngest() && (!ads || allowsAds(resolveEffectiveConsent(privacy)))
 	}
 
+	function post(body: BodyInit, headers: Record<string, string> = {}) {
+		if (!ingest || !endpoint) throw new Error('Signal ingest is disabled')
+		return (ingest.fetch ?? fetch)(endpoint, {
+			method: 'POST',
+			keepalive: true,
+			credentials: 'omit',
+			redirect: 'error',
+			referrerPolicy: 'no-referrer',
+			headers: { 'X-Sylphx-Key': ingest.apiKey, 'Content-Type': 'application/json', ...headers },
+			body,
+		})
+	}
+
+	function mintMark(id: string) {
+		mark = anonymousMark(id)
+	}
+
+	async function sendIdentify(previous: AnonymousMark, userId: string) {
+		const epoch = collectionEpoch
+		const identity = identifyEpoch
+		try {
+			// If identify overlaps a beacon, let that beacon establish the commitment first.
+			if (!previous.acknowledged) await Promise.all(previous.pending)
+			if (!previous.acknowledged || !canSend(false) || collectionEpoch !== epoch || identifyEpoch !== identity) return
+			await post(JSON.stringify({
+				consent: 'granted',
+				identify: { anonymous_id: previous.id, user_id: userId, proof: previous.proof },
+			}))
+		} catch {
+			// Best effort; do not retry the proof or prevent identified event delivery.
+		}
+	}
+
 	async function emitEvents(
 		events: readonly SignalEventInput[],
 		attribution?: SignalAttribution,
 		path?: string,
 	): Promise<boolean> {
 		if (disposed || !ingest || !endpoint) return false
+		let finishMark: (() => void) | undefined
 		try {
 			if (!Array.isArray(events)) return false
 			const count = events.length
@@ -489,20 +560,39 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 				(ingest.sessionId !== undefined && !isEventIdentifier(ingest.sessionId))
 			)
 				return false
-			let identity: { distinct_id: string; session_id: string } | undefined
+			const firstEventId = inputs[0]?.eventId ?? crypto.randomUUID()
 			const now = Date.now()
 			const eventTime = new Date(now).toISOString()
 			// Regional defaults can still send, but only an explicit analytics grant enables identity storage.
 			const persist = privacy.storedChoice === 'granted' || privacy.storedChoice === 'analytics_only'
+			const anonymousId = distinctId === undefined
+				? anonymous.next(now, persist, ingest.linkAnonymousForErasure ? mintMark : undefined)
+				: undefined
+			const identity = {
+				distinct_id: distinctId ?? anonymousId,
+				session_id: ingest.sessionId ?? session.next(now, persist),
+			}
+			// A retained ID from another page or tab has no proof in this instance.
+			if (mark && mark.id !== anonymousId) mark = undefined
+			const currentMark = mark
+			if (currentMark) {
+				let finish!: () => void
+				const pending = new Promise<void>((done) => { finish = done })
+				currentMark.pending.add(pending)
+				finishMark = () => {
+					currentMark.pending.delete(pending)
+					finish()
+				}
+			}
+			const commitment = currentMark ? await currentMark.commitment : undefined
+			if (!stillAllowed()) return false
 			const json = JSON.stringify({
 				consent: 'granted',
-				events: inputs.map((event) => ({
-					event_id: event.eventId ?? crypto.randomUUID(),
+				events: inputs.map((event, index) => ({
+					event_id: index === 0 ? firstEventId : (event.eventId ?? crypto.randomUUID()),
 					event_name: event.eventName,
-					...(identity ??= {
-						distinct_id: distinctId ?? anonymous.next(now, persist),
-						session_id: ingest.sessionId ?? session.next(now, persist),
-					}),
+					...identity,
+					anonymous_commitment: commitment,
 					event_time: event.eventTime ?? eventTime,
 					properties: { ...campaign, ...event.properties, ...(path === undefined ? {} : { path }) },
 					numeric_value: event.numericValue,
@@ -513,10 +603,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 			// Application getters/serializers can run synchronously before the send.
 			if (!stillAllowed()) return false
 			let body: BodyInit = json
-			const headers: Record<string, string> = {
-				'X-Sylphx-Key': ingest.apiKey,
-				'Content-Type': 'application/json',
-			}
+			const headers: Record<string, string> = {}
 			try {
 				if (typeof CompressionStream === 'function') {
 					const utf8 = new Blob([json])
@@ -534,23 +621,19 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 				/* Compression is optional; send the original JSON. */
 			}
 			if (!stillAllowed()) return false
-			const send = () => (ingest.fetch ?? fetch)(endpoint, {
-				method: 'POST',
-				keepalive: true,
-				credentials: 'omit',
-				redirect: 'error',
-				referrerPolicy: 'no-referrer',
-				headers,
-				body,
-			})
-			const response = await send()
-			if (response.status !== 503) return response.ok
-			if (!stillAllowed() || !(await waitForRetry(retryDelay(response.headers)))) return false
-			if (!stillAllowed()) return false
-			// Replay the same prepared body, including its event IDs for server-side dedupe.
-			return (await send()).ok
+			let response = await post(body, headers)
+			if (response.status === 503) {
+				if (!stillAllowed() || !(await waitForRetry(retryDelay(response.headers)))) return false
+				if (!stillAllowed()) return false
+				// Replay the same prepared body, including its event IDs for server-side dedupe.
+				response = await post(body, headers)
+			}
+			if (response.ok && commitment && currentMark) currentMark.acknowledged = true
+			return response.ok
 		} catch {
 			return false
+		} finally {
+			finishMark?.()
 		}
 	}
 
@@ -635,13 +718,18 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 		/** Set an opaque, non-PII ID for future consented events. Never persisted. */
 		identify(id: string): boolean {
 			if (disposed || !isEventIdentifier(id)) return false
+			const previous = mark && canSend(false) ? mark : undefined
+			mark = undefined
+			if (distinctId !== id) identifyEpoch++
 			distinctId = id
+			if (previous && previous.id !== id) void sendIdentify(previous, id)
 			return true
 		},
 		/** Clear stored and in-memory identity and page-view dedupe on logout, without changing consent. */
 		reset(): void {
 			engagement?.reset()
 			collectionEpoch++
+			mark = undefined
 			cancelRetries()
 			distinctId = undefined
 			anonymous.clear()
@@ -699,6 +787,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 		dispose() {
 			engagement?.dispose()
 			disposed = true
+			mark = undefined
 			cancelRetries()
 			pendingTouch = undefined
 			pendingPath = undefined

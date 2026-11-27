@@ -1721,3 +1721,162 @@ test('rechecks consent after serializing caller properties and never sends after
 	expect(values.has(touchStorageSlot)).toBe(false)
 	signal.dispose()
 })
+
+test('opt-in identify sends one proof of an acknowledged anonymous lifecycle', async () => {
+	const { location, values, sessions, cookieWrites } = browser()
+	location.href = 'https://example.com/landing'
+	values.set(consentStorageSlot, 'analytics_only')
+	const { ingest, calls, batches } = ingestTransport()
+	const signal = createSignalBrowser({
+		requireExplicitConsent: true,
+		ingest: { ...ingest, linkAnonymousForErasure: true },
+	})
+	expect(await signal.track({ eventName: 'visit' })).toBe(true)
+	expect(await signal.track({ eventName: 'browse' })).toBe(true)
+	const [first, second] = batches().map((b) => b.events[0])
+	expect(first.anonymous_commitment).toMatch(/^[a-f0-9]{64}$/)
+	expect(second.anonymous_commitment).toBe(first.anonymous_commitment)
+	expect(signal.identify('user_a')).toBe(true)
+	expect(signal.identify('user_b')).toBe(true)
+	expect(calls).toHaveLength(3)
+	const envelope = batches()[2]
+	expect(envelope).toEqual({
+		consent: 'granted',
+		identify: {
+			anonymous_id: first.distinct_id,
+			user_id: 'user_a',
+			proof: expect.stringMatching(/^[a-f0-9]{64}$/),
+		},
+	})
+	const hex = envelope.identify.proof as string
+	const digest = await crypto.subtle.digest('SHA-256', Buffer.from(hex, 'hex'))
+	expect(Buffer.from(digest).toString('hex')).toBe(first.anonymous_commitment)
+	expect(String(calls[0]?.init?.body)).not.toContain(hex)
+	expect(calls[2]?.init).toMatchObject({
+		credentials: 'omit',
+		redirect: 'error',
+		referrerPolicy: 'no-referrer',
+	})
+	expect(await signal.track({ eventName: 'signed_in' })).toBe(true)
+	expect(batches()[3].events[0].distinct_id).toBe('user_b')
+	expect(batches()[3].events[0]).not.toHaveProperty('anonymous_commitment')
+	signal.reset()
+	expect(await signal.track({ eventName: 'after_logout' })).toBe(true)
+	expect(batches()[4].events[0].distinct_id).not.toBe(first.distinct_id)
+	expect(batches()[4].events[0].anonymous_commitment).not.toBe(first.anonymous_commitment)
+	expect([...values.keys()]).toEqual([consentStorageSlot, anonymousStorageSlot])
+	expect(JSON.parse(values.get(anonymousStorageSlot) ?? 'null')).toEqual({
+		id: batches()[4].events[0].distinct_id,
+		timestamp: expect.any(Number),
+	})
+	expect(JSON.parse(sessions.get(sessionStorageSlot) ?? 'null')).toEqual({
+		id: batches()[4].events[0].session_id,
+		timestamp: expect.any(Number),
+	})
+	expect(cookieWrites()).toBe(0)
+	signal.dispose()
+})
+
+for (const canceled of [
+	false,
+	'reset',
+	'consent',
+	'removed consent',
+	'gpc',
+	'dispose',
+	'account switch',
+] as const) {
+	test(`identify proof waits for its anonymous beacon, then observes ${canceled}`, async () => {
+		const { values, nav, win } = browser()
+		values.set(consentStorageSlot, 'granted')
+		let started!: () => void
+		const began = new Promise<void>((resolve) => {
+			started = resolve
+		})
+		let finish!: (response: Response) => void
+		const result = new Promise<Response>((resolve) => {
+			finish = resolve
+		})
+		const sender = mock(async (_url: string, init?: RequestInit) => {
+			if (JSON.parse(String(init?.body)).identify) return new Response(null, { status: 503 })
+			started()
+			return result
+		})
+		const signal = createSignalBrowser({
+			requireExplicitConsent: true,
+			ingest: {
+				apiKey: key,
+				fetch: sender as unknown as typeof fetch,
+				linkAnonymousForErasure: true,
+			},
+		})
+		const pending = signal.track({ eventName: 'visit' })
+		await began
+		expect(signal.identify('user_a')).toBe(true)
+		expect(sender).toHaveBeenCalledTimes(1)
+		if (canceled === 'reset') signal.reset()
+		if (canceled === 'consent') signal.setConsent('denied')
+		if (canceled === 'removed consent') {
+			values.delete(consentStorageSlot)
+			win.dispatchEvent(Object.assign(new Event('storage'), { key: consentStorageSlot }))
+			signal.setConsent('granted')
+		}
+		if (canceled === 'account switch') {
+			signal.identify('user_b')
+			signal.identify('user_a')
+		}
+		if (canceled === 'gpc') nav.globalPrivacyControl = true
+		if (canceled === 'dispose') signal.dispose()
+		finish(new Response(null, { status: 202 }))
+		expect(await pending).toBe(true)
+		await new Promise((resolve) => setTimeout(resolve, 0))
+		expect(sender).toHaveBeenCalledTimes(canceled ? 1 : 2)
+		signal.dispose()
+	})
+}
+
+test('configured IDs are never marked or sent as a browser-generated alias', async () => {
+	const { values } = browser()
+	values.set(consentStorageSlot, 'granted')
+	const { ingest, batches } = ingestTransport()
+	const signal = createSignalBrowser({
+		requireExplicitConsent: true,
+		ingest: { ...ingest, distinctId: 'application-id', linkAnonymousForErasure: true },
+	})
+	expect(await signal.track({ eventName: 'visit' })).toBe(true)
+	expect(signal.identify('user_a')).toBe(true)
+	expect(batches()).toHaveLength(1)
+	expect(batches()[0].events[0]).not.toHaveProperty('anonymous_commitment')
+	signal.dispose()
+})
+
+test.each([
+	false,
+	true,
+])('keeps a retained ID unmarked on reload (mark before reload: %s)', async (enabled) => {
+	const { values, location } = browser()
+	location.href = 'https://example.com/landing'
+	values.set(consentStorageSlot, 'analytics_only')
+	const { ingest, batches } = ingestTransport()
+	const options = {
+		requireExplicitConsent: true,
+		ingest: { ...ingest, linkAnonymousForErasure: true },
+	}
+	const first = createSignalBrowser({
+		...options,
+		ingest: { ...options.ingest, linkAnonymousForErasure: enabled },
+	})
+	expect(await first.track({ eventName: 'visit' })).toBe(true)
+	const before = batches()[0].events[0]
+	expect(Object.hasOwn(before, 'anonymous_commitment')).toBe(enabled)
+	first.dispose()
+	const reloaded = createSignalBrowser(options)
+	expect(await reloaded.track({ eventName: 'browse' })).toBe(true)
+	const after = batches()[1].events[0]
+	expect(after.distinct_id).toBe(before.distinct_id)
+	expect(after.session_id).toBe(before.session_id)
+	expect(after).not.toHaveProperty('anonymous_commitment')
+	expect(reloaded.identify('user_a')).toBe(true)
+	expect(batches()).toHaveLength(2)
+	reloaded.dispose()
+})
