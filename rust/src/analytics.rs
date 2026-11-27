@@ -281,7 +281,9 @@ pub struct AnalyticsRetentionCohort {
     pub cohort_size: i64,
     /// Distinct subjects retained in each period according to the selected mode.
     /// Returns must be at or after cohort entry and before the exclusive end. Index 0
-    /// is the entry period; the array length is periods + 1.
+    /// is the entry period. It can be below cohort_size if the return criterion
+    /// excludes cohort entry and some subjects have no qualifying return in the
+    /// periods counted by the selected mode. The array length is periods + 1.
     #[serde(
         default,
         skip_serializing_if = "Vec::is_empty",
@@ -842,7 +844,9 @@ pub struct RetentionQuery {
         alias = "cohortEvent"
     )]
     pub cohort_event: String,
-    /// The event that counts as a return. Defaults to cohort_event when omitted.
+    /// One event that counts as a causal return. Mutually exclusive with
+    /// nonempty return_events and return_any_event = true. If none is selected,
+    /// returns default to cohort_event.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
@@ -882,6 +886,19 @@ pub struct RetentionQuery {
     /// any later period before end_time, even beyond the requested periods.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mode: Option<RetentionMode>,
+    /// Up to 16 event names that count as causal returns. A nonempty list is
+    /// mutually exclusive with return_event and return_any_event = true.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "returnEvents")]
+    pub return_events: Vec<String>,
+    /// When true, any in-window event in the environment, including cohort entry,
+    /// can count as a causal return. Mutually exclusive with return_event and
+    /// nonempty return_events. False is equivalent to omission.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "returnAnyEvent"
+    )]
+    pub return_any_event: Option<bool>,
 }
 
 /// A time-bucketed aggregate over deduplicated events.

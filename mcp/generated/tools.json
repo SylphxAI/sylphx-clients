@@ -7041,9 +7041,20 @@
                 "description": "Up to four exact string matches required on the cohort-entry event only.\nKeys use the same grammar as breakdown_property; values are at most 128 bytes.",
                 "type": "object"
               },
+              "return_any_event": {
+                "description": "When true, any in-window event in the environment, including cohort entry,\ncan count as a causal return. Mutually exclusive with return_event and\nnonempty return_events. False is equivalent to omission.",
+                "type": "boolean"
+              },
               "return_event": {
-                "description": "The event that counts as a return. Defaults to cohort_event when omitted.",
+                "description": "One event that counts as a causal return. Mutually exclusive with\nnonempty return_events and return_any_event = true. If none is selected,\nreturns default to cohort_event.",
                 "type": "string"
+              },
+              "return_events": {
+                "description": "Up to 16 event names that count as causal returns. A nonempty list is\nmutually exclusive with return_event and return_any_event = true.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
               }
             },
             "required": [
@@ -54126,9 +54137,20 @@
                 "description": "Up to four exact string matches required on the cohort-entry event only.\nKeys use the same grammar as breakdown_property; values are at most 128 bytes.",
                 "type": "object"
               },
+              "return_any_event": {
+                "description": "When true, any in-window event in the environment, including cohort entry,\ncan count as a causal return. Mutually exclusive with return_event and\nnonempty return_events. False is equivalent to omission.",
+                "type": "boolean"
+              },
               "return_event": {
-                "description": "The event that counts as a return. Defaults to cohort_event when omitted.",
+                "description": "One event that counts as a causal return. Mutually exclusive with\nnonempty return_events and return_any_event = true. If none is selected,\nreturns default to cohort_event.",
                 "type": "string"
+              },
+              "return_events": {
+                "description": "Up to 16 event names that count as causal returns. A nonempty list is\nmutually exclusive with return_event and return_any_event = true.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
               }
             },
             "required": [

@@ -5821,7 +5821,7 @@
             "type": "string"
           },
           "retained_subjects": {
-            "description": "Distinct subjects retained in each period according to the selected mode.\nReturns must be at or after cohort entry and before the exclusive end. Index 0\nis the entry period; the array length is periods + 1.",
+            "description": "Distinct subjects retained in each period according to the selected mode.\nReturns must be at or after cohort entry and before the exclusive end. Index 0\nis the entry period. It can be below cohort_size if the return criterion\nexcludes cohort entry and some subjects have no qualifying return in the\nperiods counted by the selected mode. The array length is periods + 1.",
             "items": {
               "format": "int64",
               "type": "string"
@@ -6381,9 +6381,20 @@
             "description": "Up to four exact string matches required on the cohort-entry event only.\nKeys use the same grammar as breakdown_property; values are at most 128 bytes.",
             "type": "object"
           },
+          "return_any_event": {
+            "description": "When true, any in-window event in the environment, including cohort entry,\ncan count as a causal return. Mutually exclusive with return_event and\nnonempty return_events. False is equivalent to omission.",
+            "type": "boolean"
+          },
           "return_event": {
-            "description": "The event that counts as a return. Defaults to cohort_event when omitted.",
+            "description": "One event that counts as a causal return. Mutually exclusive with\nnonempty return_events and return_any_event = true. If none is selected,\nreturns default to cohort_event.",
             "type": "string"
+          },
+          "return_events": {
+            "description": "Up to 16 event names that count as causal returns. A nonempty list is\nmutually exclusive with return_event and return_any_event = true.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           }
         },
         "required": [

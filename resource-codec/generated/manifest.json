@@ -22825,7 +22825,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "Distinct subjects retained in each period according to the selected mode.\nReturns must be at or after cohort entry and before the exclusive end. Index 0\nis the entry period; the array length is periods + 1.",
+          "doc": "Distinct subjects retained in each period according to the selected mode.\nReturns must be at or after cohort entry and before the exclusive end. Index 0\nis the entry period. It can be below cohort_size if the return criterion\nexcludes cohort entry and some subjects have no qualifying return in the\nperiods counted by the selected mode. The array length is periods + 1.",
           "filterable": false,
           "name": "retained_subjects",
           "number": 4,
@@ -24346,7 +24346,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "The event that counts as a return. Defaults to cohort_event when omitted.",
+          "doc": "One event that counts as a causal return. Mutually exclusive with\nnonempty return_events and return_any_event = true. If none is selected,\nreturns default to cohort_event.",
           "filterable": false,
           "name": "return_event",
           "number": 2,
@@ -24475,6 +24475,44 @@
           "type": {
             "kind": "enum",
             "name": "sylphx.analytics.v1.RetentionMode"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Up to 16 event names that count as causal returns. A nonempty list is\nmutually exclusive with return_event and return_any_event = true.",
+          "filterable": false,
+          "name": "return_events",
+          "number": 9,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "When true, any in-window event in the environment, including cohort entry,\ncan count as a causal return. Mutually exclusive with return_event and\nnonempty return_events. False is equivalent to omission.",
+          "filterable": false,
+          "name": "return_any_event",
+          "number": 10,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
           }
         }
       ],

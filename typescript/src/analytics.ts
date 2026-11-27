@@ -142,7 +142,9 @@ export interface AnalyticsRetentionCohort {
 	/**
 	 * Distinct subjects retained in each period according to the selected mode.
 	 * Returns must be at or after cohort entry and before the exclusive end. Index 0
-	 * is the entry period; the array length is periods + 1.
+	 * is the entry period. It can be below cohort_size if the return criterion
+	 * excludes cohort entry and some subjects have no qualifying return in the
+	 * periods counted by the selected mode. The array length is periods + 1.
 	 */
 	retainedSubjects?: string[]
 	/**
@@ -440,7 +442,11 @@ export interface QueryAnalyticsEventsResponse {
 export interface RetentionQuery {
 	/** The event that qualifies a subject for a cohort. */
 	cohortEvent?: string
-	/** The event that counts as a return. Defaults to cohort_event when omitted. */
+	/**
+	 * One event that counts as a causal return. Mutually exclusive with
+	 * nonempty return_events and return_any_event = true. If none is selected,
+	 * returns default to cohort_event.
+	 */
 	returnEvent?: string
 	/** The reporting calendar unit for both cohort entry and return periods. */
 	interval?: RetentionInterval
@@ -465,6 +471,17 @@ export interface RetentionQuery {
 	 * any later period before end_time, even beyond the requested periods.
 	 */
 	mode?: RetentionMode
+	/**
+	 * Up to 16 event names that count as causal returns. A nonempty list is
+	 * mutually exclusive with return_event and return_any_event = true.
+	 */
+	returnEvents?: string[]
+	/**
+	 * When true, any in-window event in the environment, including cohort entry,
+	 * can count as a causal return. Mutually exclusive with return_event and
+	 * nonempty return_events. False is equivalent to omission.
+	 */
+	returnAnyEvent?: boolean
 }
 
 /** A time-bucketed aggregate over deduplicated events. */
@@ -672,6 +689,8 @@ runtime.registerSchemas({
 		['returnEvent', 'return_event'],
 		['breakdownProperty', 'breakdown_property'],
 		['propertyFilters', 'property_filters', undefined, 'map'],
+		['returnEvents', 'return_events'],
+		['returnAnyEvent', 'return_any_event'],
 	],
 	'sylphx.analytics.v1.RollupQuery': [
 		['eventNames', 'event_names'],
