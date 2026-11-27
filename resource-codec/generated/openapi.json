@@ -29959,6 +29959,11 @@
       "sylphx.money.v1.CheckEntitlementResponse": {
         "description": "The response of CheckEntitlement.",
         "properties": {
+          "decision": {
+            "$ref": "#/components/schemas/sylphx.money.v1.EntitlementDecision",
+            "description": "Always set on success, including when no active grant exists.\nMissing or unspecified is not an authoritative answer.",
+            "readOnly": true
+          },
           "entitled": {
             "description": "Whether the subject holds the feature now.",
             "type": "boolean"
@@ -31060,6 +31065,14 @@
           "reason"
         ],
         "type": "object"
+      },
+      "sylphx.money.v1.EntitlementDecision": {
+        "description": "EntitlementDecision is the outcome of a completed entitlement lookup.",
+        "enum": [
+          "entitled",
+          "not_entitled"
+        ],
+        "type": "string"
       },
       "sylphx.money.v1.EntitlementGrant": {
         "description": "An Entitlement Grant is one feature a subject holds, from one source: a\nsubscription, an order, a store purchase, or a manual grant. Money derives\nit; a client event never writes one.",

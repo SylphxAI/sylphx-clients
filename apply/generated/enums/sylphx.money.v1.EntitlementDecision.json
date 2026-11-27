@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.money.v1.EntitlementDecision",
+  "package": "sylphx.money.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "ENTITLEMENT_DECISION_ENTITLED",
+      "wire": "entitled"
+    },
+    {
+      "number": 2,
+      "proto_name": "ENTITLEMENT_DECISION_NOT_ENTITLED",
+      "wire": "not_entitled"
+    }
+  ]
+}

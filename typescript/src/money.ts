@@ -364,6 +364,11 @@ export interface CheckEntitlementResponse {
 	 * the `grant` claim of an offline licence token.
 	 */
 	source?: string
+	/**
+	 * Always set on success, including when no active grant exists.
+	 * Missing or unspecified is not an authoritative answer.
+	 */
+	readonly decision?: EntitlementDecision
 }
 
 /**
@@ -3475,6 +3480,9 @@ export interface VerifyStorePurchaseResponse {
  * own server, with a secret key, always chooses the currency itself.
  */
 export type CurrencyMode = 'multi_currency' | 'country_locked' | 'single_asset' | (string & {})
+
+/** EntitlementDecision is the outcome of a completed entitlement lookup. */
+export type EntitlementDecision = 'entitled' | 'not_entitled' | (string & {})
 
 /** FeatureKind is how a feature is granted. */
 export type FeatureKind = 'boolean' | 'limit' | (string & {})

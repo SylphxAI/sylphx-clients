@@ -12,13 +12,18 @@ const ENV: &str = "orgs/o/projects/p/envs/e";
 #[derive(Default)]
 struct Recorder {
     requests: Mutex<Vec<HttpRequest>>,
-    replies: Mutex<VecDeque<Value>>,
+    replies: Mutex<VecDeque<Vec<u8>>>,
 }
 
 impl Recorder {
     fn replies(values: impl IntoIterator<Item = Value>) -> Self {
         Self {
-            replies: Mutex::new(values.into_iter().collect()),
+            replies: Mutex::new(
+                values
+                    .into_iter()
+                    .map(|v| serde_json::to_vec(&v).unwrap())
+                    .collect(),
+            ),
             ..Self::default()
         }
     }
@@ -35,7 +40,7 @@ impl Transport for Recorder {
             Ok(HttpResponse {
                 status: 200,
                 request_id: None,
-                body: serde_json::to_vec(&body).unwrap(),
+                body,
             })
         }
     }
@@ -108,20 +113,28 @@ fn checkout_typed_and_dynamic_calls_send_only_the_session_body() {
 #[test]
 fn entitlement_check_preserves_subject_feature_limit_and_expiry() {
     let client = Client::new(Recorder::replies([
-        json!({"entitled": true, "limit": "50", "expire_time": "2030-01-01T00:00:00Z"}),
-        json!({}),
+        json!({"decision": "entitled", "entitled": true, "limit": "50", "expire_time": "2030-01-01T00:00:00Z"}),
+        json!({"decision": "not_entitled"}),
+        json!({"decision": "not_entitled", "entitled": false}),
     ]));
     let args = json!({"parent": ENV, "subject": {"end_user": "learner"}, "feature": "pro"});
     let request: money::CheckEntitlementRequest = serde_json::from_value(args.clone()).unwrap();
     let grant = ready(client.money().entitlement_grants().check(request)).unwrap();
     assert!(grant.entitled);
+    assert_eq!(grant.decision, Some(money::EntitlementDecision::Entitled));
     assert_eq!(grant.limit, "50");
     assert_eq!(grant.expire_time, "2030-01-01T00:00:00Z");
-    let request: money::CheckEntitlementRequest = serde_json::from_value(args).unwrap();
-    assert!(
-        !ready(client.money().entitlement_grants().check(request))
-            .unwrap()
-            .entitled
+    let request: money::CheckEntitlementRequest = serde_json::from_value(args.clone()).unwrap();
+    let denied = ready(client.money().entitlement_grants().check(request)).unwrap();
+    assert!(!denied.entitled);
+    assert_eq!(
+        denied.decision,
+        Some(money::EntitlementDecision::NotEntitled)
+    );
+    let dynamic = ready(client.invoke("money.entitlement_grants.check", args)).unwrap();
+    assert_eq!(
+        dynamic,
+        json!({"decision": "not_entitled", "entitled": false})
     );
     let requests = client.transport().requests.lock().unwrap();
     assert_eq!(
@@ -149,4 +162,49 @@ fn a_key_without_an_environment_cannot_call_money() {
     ));
     assert!(matches!(result, Err(Error::InvalidArgument(_))));
     assert_eq!(client.transport().requests.lock().unwrap().len(), 1);
+}
+
+#[test]
+fn entitlement_check_refuses_success_bodies_without_a_coherent_decision() {
+    let args = json!({"parent": ENV, "subject": {"end_user": "learner"}, "feature": "pro"});
+    for body in [
+        &b""[..],
+        b" \n",
+        b"{}",
+        b"{",
+        b"null",
+        br#"[true,"","","","","entitled"]"#,
+        br#"{"entitled":true}"#,
+        br#"{"entitled":false}"#,
+        br#"{"decision":"unspecified"}"#,
+        br#"{"decision":"future_decision"}"#,
+        br#"{"decision":null}"#,
+        br#"{"decision":2}"#,
+        br#"{"decision":"entitled"}"#,
+        br#"{"decision":"entitled","entitled":false}"#,
+        br#"{"decision":"not_entitled","entitled":true}"#,
+        br#"{"decision":"not_entitled","entitled":"false"}"#,
+        br#"{"decision":"not_entitled","decision":"not_entitled"}"#,
+        br#"{"decision":"not_entitled","limit":50}"#,
+    ] {
+        let client = Client::new(Recorder {
+            replies: Mutex::new([body.to_vec(), body.to_vec()].into()),
+            ..Recorder::default()
+        });
+        let request: money::CheckEntitlementRequest = serde_json::from_value(args.clone()).unwrap();
+        assert!(
+            matches!(
+                ready(client.money().entitlement_grants().check(request)),
+                Err(Error::Decode(_))
+            ),
+            "typed check accepted {body:?}",
+        );
+        assert!(
+            matches!(
+                ready(client.invoke("money.entitlement_grants.check", args.clone())),
+                Err(Error::Decode(_))
+            ),
+            "dynamic check accepted {body:?}",
+        );
+    }
 }

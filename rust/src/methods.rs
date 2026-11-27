@@ -12026,3 +12026,10 @@ pub fn method(id: &str) -> Option<&'static MethodSpec> {
         .ok()
         .map(|i| &METHODS[i])
 }
+
+pub(crate) fn response_validator(id: &str) -> Option<crate::runtime::ResponseValidator> {
+    match id {
+        "money.entitlement_grants.check" => Some(crate::money::validate_check_entitlement),
+        _ => None,
+    }
+}

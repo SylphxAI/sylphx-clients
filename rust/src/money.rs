@@ -835,6 +835,12 @@ pub struct CheckEntitlementResponse {
     /// the `grant` claim of an offline licence token.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub source: String,
+    /// Always set on success, including when no active grant exists.
+    /// Missing or unspecified is not an authoritative answer.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub decision: Option<EntitlementDecision>,
 }
 
 /// Request for CheckMerchantAccountProcessorPermissions. Read-only Stripe
@@ -7770,6 +7776,57 @@ impl crate::runtime::QueryValue for CurrencyMode {
     }
 }
 
+/// EntitlementDecision is the outcome of a completed entitlement lookup.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum EntitlementDecision {
+    /// An active grant exists for the subject and feature.
+    Entitled,
+    /// No active grant exists for the subject and feature.
+    NotEntitled,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl EntitlementDecision {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Entitled => "entitled",
+            Self::NotEntitled => "not_entitled",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "entitled" => Self::Entitled,
+            "not_entitled" => Self::NotEntitled,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for EntitlementDecision {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for EntitlementDecision {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for EntitlementDecision {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
 /// FeatureKind is how a feature is granted.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[non_exhaustive]
@@ -9850,7 +9907,9 @@ impl<'a, T: crate::runtime::Transport> EntitlementGrantsCollection<'a, T> {
             origin: None,
             effect_ids: false,
         };
-        self.client.call(http).await
+        self.client
+            .call_validated(http, crate::money::validate_check_entitlement)
+            .await
     }
 
     /// Creates a manual entitlement grant (support, comp, grace). Append-only.
@@ -11630,5 +11689,26 @@ impl<'a, T: crate::runtime::Transport> ExchangeRatesCollection<'a, T> {
             }
             request.page_token = page.next_page_token;
         }
+    }
+}
+
+/// A completed check must explicitly decide, and agree with the legacy
+/// boolean. Proto3 may omit false but must not omit the decision.
+pub(crate) fn validate_check_entitlement(body: &[u8]) -> Result<(), crate::runtime::Error> {
+    use crate::runtime::Error;
+
+    if !body.trim_ascii_start().starts_with(b"{") {
+        return Err(Error::Decode(
+            "entitlement check requires a JSON object".into(),
+        ));
+    }
+    let answer: CheckEntitlementResponse =
+        serde_json::from_slice(body).map_err(|e| Error::Decode(e.to_string()))?;
+    match (answer.decision, answer.entitled) {
+        (Some(EntitlementDecision::Entitled), true)
+        | (Some(EntitlementDecision::NotEntitled), false) => Ok(()),
+        _ => Err(Error::Decode(
+            "entitlement check requires a decision consistent with entitled".into(),
+        )),
     }
 }

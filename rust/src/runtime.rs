@@ -204,6 +204,8 @@ impl Client<HttpTransport> {
     }
 }
 
+pub(crate) type ResponseValidator = fn(&[u8]) -> Result<(), Error>;
+
 impl<T: Transport> Client<T> {
     pub fn new(transport: T) -> Self {
         Self { transport }
@@ -225,7 +227,11 @@ impl<T: Transport> Client<T> {
                 "use invoke_stream for a server-streaming method".into(),
             ));
         }
-        self.call(spec.request(args)?).await
+        let request = spec.request(args)?;
+        match crate::methods::response_validator(method_id) {
+            Some(validate) => self.call_validated(request, validate).await,
+            None => self.call(request).await,
+        }
     }
 
     /// The transport this client sends through.
@@ -235,7 +241,15 @@ impl<T: Transport> Client<T> {
 
     /// Sends a request and decodes a success body into `R`.
     pub async fn call<R: DeserializeOwned>(&self, request: HttpRequest) -> Result<R, Error> {
-        Self::decode(self.transport.send(request).await?)
+        Self::decode(self.transport.send(request).await?, None)
+    }
+
+    pub(crate) async fn call_validated<R: DeserializeOwned>(
+        &self,
+        request: HttpRequest,
+        validate: ResponseValidator,
+    ) -> Result<R, Error> {
+        Self::decode(self.transport.send(request).await?, Some(validate))
     }
 
     pub(crate) async fn call_with_idempotency_key<R: DeserializeOwned>(
@@ -259,10 +273,14 @@ impl<T: Transport> Client<T> {
             self.transport
                 .send_with_idempotency_key(request, key)
                 .await?,
+            None,
         )
     }
 
-    fn decode<R: DeserializeOwned>(response: HttpResponse) -> Result<R, Error> {
+    fn decode<R: DeserializeOwned>(
+        response: HttpResponse,
+        validate: Option<ResponseValidator>,
+    ) -> Result<R, Error> {
         if response.status >= 400 {
             let raw: serde_json::Value = serde_json::from_slice(&response.body).unwrap_or_default();
             // RFC 9457 (the Resource API) has no `error` member; a service's
@@ -285,10 +303,13 @@ impl<T: Transport> Client<T> {
                 response.request_id,
             ));
         }
-        let body: &[u8] = if response.body.is_empty() {
-            b"{}"
-        } else {
-            &response.body
+        let body: &[u8] = match validate {
+            Some(validate) => {
+                validate(&response.body)?;
+                &response.body
+            }
+            None if response.body.is_empty() => b"{}",
+            None => &response.body,
         };
         serde_json::from_slice(body).map_err(|e| Error::Decode(e.to_string()))
     }
@@ -701,7 +722,7 @@ impl MethodSpec {
                     return Err(Error::InvalidArgument(format!(
                         "{}: query parameter `{q}` must be a scalar, got {other}",
                         self.id
-                    )))
+                    )));
                 }
             }
         }
