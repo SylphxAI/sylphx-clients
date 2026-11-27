@@ -761,6 +761,25 @@
       ]
     },
     {
+      "doc": "Unit counted in a funnel step.",
+      "name": "sylphx.analytics.v1.FunnelCountBy",
+      "package": "sylphx.analytics.v1",
+      "values": [
+        {
+          "doc": "Count distinct stored subjects.",
+          "number": 1,
+          "proto_name": "FUNNEL_COUNT_BY_SUBJECT",
+          "wire": "subject"
+        },
+        {
+          "doc": "Count in-window sessions by SDK session ID, or by stored subject with\ngaps of more than 30 minutes splitting events without an SDK session ID.",
+          "number": 2,
+          "proto_name": "FUNNEL_COUNT_BY_SESSION",
+          "wire": "session"
+        }
+      ]
+    },
+    {
       "doc": "The width of a UTC retention period.",
       "name": "sylphx.analytics.v1.RetentionInterval",
       "package": "sylphx.analytics.v1",
@@ -22627,7 +22646,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "Distinct subjects that reached this step in this breakdown.",
+          "doc": "Distinct subjects (or sessions when count_by is session) that reached this step.",
           "filterable": false,
           "name": "subjects",
           "number": 4,
@@ -22644,7 +22663,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "Percentage of first-step subjects who reached this step (0–100).\nZero if there were no first-step subjects.",
+          "doc": "Percentage of the first-step count that reached this step (0–100).\nZero if the first-step count is zero.",
           "filterable": false,
           "name": "conversion_from_start_pct",
           "number": 5,
@@ -22661,7 +22680,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "Percentage of previous-step subjects who reached this step (0–100).\nThe first step uses its own count as denominator; zero when it is zero.",
+          "doc": "Percentage of the previous-step count that reached this step (0–100).\nThe first step uses its own count as denominator; zero when it is zero.",
           "filterable": false,
           "name": "conversion_from_previous_pct",
           "number": 6,
@@ -23554,7 +23573,7 @@
       "package": "sylphx.analytics.v1"
     },
     {
-      "doc": "The longest ordered prefix reached by each subject within a conversion window.",
+      "doc": "The longest ordered prefix reached by each subject or session within a conversion window.",
       "fields": [
         {
           "behaviors": [
@@ -23652,6 +23671,25 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Unit to count at each step. Omit to count subjects.",
+          "filterable": false,
+          "name": "count_by",
+          "number": 6,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "enum",
+            "name": "sylphx.analytics.v1.FunnelCountBy"
           }
         }
       ],

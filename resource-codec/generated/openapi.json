@@ -5754,11 +5754,11 @@
             "type": "string"
           },
           "conversion_from_previous_pct": {
-            "description": "Percentage of previous-step subjects who reached this step (0–100).\nThe first step uses its own count as denominator; zero when it is zero.",
+            "description": "Percentage of the previous-step count that reached this step (0–100).\nThe first step uses its own count as denominator; zero when it is zero.",
             "type": "number"
           },
           "conversion_from_start_pct": {
-            "description": "Percentage of first-step subjects who reached this step (0–100).\nZero if there were no first-step subjects.",
+            "description": "Percentage of the first-step count that reached this step (0–100).\nZero if the first-step count is zero.",
             "type": "number"
           },
           "event_name": {
@@ -5771,7 +5771,7 @@
             "type": "integer"
           },
           "subjects": {
-            "description": "Distinct subjects that reached this step in this breakdown.",
+            "description": "Distinct subjects (or sessions when count_by is session) that reached this step.",
             "format": "int64",
             "type": "string"
           }
@@ -6079,8 +6079,16 @@
         ],
         "type": "string"
       },
+      "sylphx.analytics.v1.FunnelCountBy": {
+        "description": "Unit counted in a funnel step.",
+        "enum": [
+          "subject",
+          "session"
+        ],
+        "type": "string"
+      },
       "sylphx.analytics.v1.FunnelQuery": {
-        "description": "The longest ordered prefix reached by each subject within a conversion window.",
+        "description": "The longest ordered prefix reached by each subject or session within a conversion window.",
         "properties": {
           "breakdown_property": {
             "description": "A top-level property key, matching ^[A-Za-z_][A-Za-z0-9_.]{0,63}$.\nEach step in a chain must have the same string value. Missing and\nnon-string values are grouped with the empty string. Omit for one funnel.",
@@ -6090,6 +6098,10 @@
             "description": "Seconds allowed from the first step, inclusive; 1 to 2592000 (30 days).",
             "format": "int64",
             "type": "string"
+          },
+          "count_by": {
+            "$ref": "#/components/schemas/sylphx.analytics.v1.FunnelCountBy",
+            "description": "Unit to count at each step. Omit to count subjects."
           },
           "limit": {
             "description": "Maximum breakdown values returned. Defaults to 50; clamped to 1–200.",

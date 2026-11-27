@@ -104,15 +104,15 @@ export interface AnalyticsFunnelStep {
 	eventName?: string
 	/** The breakdown value; empty for an unsegmented funnel. */
 	breakdownValue?: string
-	/** Distinct subjects that reached this step in this breakdown. */
+	/** Distinct subjects (or sessions when count_by is session) that reached this step. */
 	subjects?: string
 	/**
-	 * Percentage of first-step subjects who reached this step (0–100).
-	 * Zero if there were no first-step subjects.
+	 * Percentage of the first-step count that reached this step (0–100).
+	 * Zero if the first-step count is zero.
 	 */
 	conversionFromStartPct?: number
 	/**
-	 * Percentage of previous-step subjects who reached this step (0–100).
+	 * Percentage of the previous-step count that reached this step (0–100).
 	 * The first step uses its own count as denominator; zero when it is zero.
 	 */
 	conversionFromPreviousPct?: number
@@ -295,7 +295,7 @@ export interface EventResult {
 	reason?: string
 }
 
-/** The longest ordered prefix reached by each subject within a conversion window. */
+/** The longest ordered prefix reached by each subject or session within a conversion window. */
 export interface FunnelQuery {
 	/**
 	 * Two to 16 event names in step order. Each step must occur at a strictly
@@ -317,6 +317,8 @@ export interface FunnelQuery {
 	propertyFilters?: Record<string, string>
 	/** Maximum breakdown values returned. Defaults to 50; clamped to 1–200. */
 	limit?: number
+	/** Unit to count at each step. Omit to count subjects. */
+	countBy?: FunnelCountBy
 }
 
 /** The request of ListAnalyticsEvents. */
@@ -525,6 +527,9 @@ export type EventSource = 'client' | 'server' | (string & {})
 /** What became of one event of a batch. */
 export type EventStatus = 'accepted' | 'duplicate' | 'rejected' | (string & {})
 
+/** Unit counted in a funnel step. */
+export type FunnelCountBy = 'subject' | 'session' | (string & {})
+
 /** The width of a UTC retention period. */
 export type RetentionInterval = 'day' | 'week' | (string & {})
 
@@ -619,6 +624,7 @@ runtime.registerSchemas({
 		['conversionWindowSeconds', 'conversion_window_seconds'],
 		['breakdownProperty', 'breakdown_property'],
 		['propertyFilters', 'property_filters', undefined, 'map'],
+		['countBy', 'count_by'],
 	],
 	'sylphx.analytics.v1.ListAnalyticsEventsRequest': [
 		['startTime', 'start_time'],

@@ -6916,6 +6916,14 @@
                 "format": "int64",
                 "type": "string"
               },
+              "count_by": {
+                "description": "Unit to count at each step. Omit to count subjects.",
+                "enum": [
+                  "subject",
+                  "session"
+                ],
+                "type": "string"
+              },
               "limit": {
                 "description": "Maximum breakdown values returned. Defaults to 50; clamped to 1–200.",
                 "format": "int32",
@@ -53989,6 +53997,14 @@
               "conversion_window_seconds": {
                 "description": "Seconds allowed from the first step, inclusive; 1 to 2592000 (30 days).",
                 "format": "int64",
+                "type": "string"
+              },
+              "count_by": {
+                "description": "Unit to count at each step. Omit to count subjects.",
+                "enum": [
+                  "subject",
+                  "session"
+                ],
                 "type": "string"
               },
               "limit": {

@@ -200,22 +200,22 @@ pub struct AnalyticsFunnelStep {
         alias = "breakdownValue"
     )]
     pub breakdown_value: String,
-    /// Distinct subjects that reached this step in this breakdown.
+    /// Distinct subjects (or sessions when count_by is session) that reached this step.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
         with = "crate::runtime::int64"
     )]
     pub subjects: i64,
-    /// Percentage of first-step subjects who reached this step (0–100).
-    /// Zero if there were no first-step subjects.
+    /// Percentage of the first-step count that reached this step (0–100).
+    /// Zero if the first-step count is zero.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
         alias = "conversionFromStartPct"
     )]
     pub conversion_from_start_pct: f64,
-    /// Percentage of previous-step subjects who reached this step (0–100).
+    /// Percentage of the previous-step count that reached this step (0–100).
     /// The first step uses its own count as denominator; zero when it is zero.
     #[serde(
         default,
@@ -572,7 +572,7 @@ pub struct EventResult {
     pub reason: String,
 }
 
-/// The longest ordered prefix reached by each subject within a conversion window.
+/// The longest ordered prefix reached by each subject or session within a conversion window.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct FunnelQuery {
@@ -612,6 +612,9 @@ pub struct FunnelQuery {
     /// Maximum breakdown values returned. Defaults to 50; clamped to 1–200.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub limit: Option<i32>,
+    /// Unit to count at each step. Omit to count subjects.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "countBy")]
+    pub count_by: Option<FunnelCountBy>,
 }
 
 /// The request of ListAnalyticsEvents.
@@ -1159,6 +1162,58 @@ impl<'de> serde::Deserialize<'de> for EventStatus {
 }
 
 impl crate::runtime::QueryValue for EventStatus {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// Unit counted in a funnel step.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum FunnelCountBy {
+    /// Count distinct stored subjects.
+    Subject,
+    /// Count in-window sessions by SDK session ID, or by stored subject with
+    /// gaps of more than 30 minutes splitting events without an SDK session ID.
+    Session,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl FunnelCountBy {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Subject => "subject",
+            Self::Session => "session",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "subject" => Self::Subject,
+            "session" => Self::Session,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for FunnelCountBy {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for FunnelCountBy {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for FunnelCountBy {
     fn query_value(&self) -> Option<String> {
         Some(self.as_str().to_string())
     }
