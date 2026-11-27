@@ -119,6 +119,18 @@ export interface AnalyticsFunnelStep {
 	 * The first step uses its own count as denominator; zero when it is zero.
 	 */
 	conversionFromPreviousPct?: number
+	/**
+	 * Exact median milliseconds from step 0 among subjects (or sessions when
+	 * count_by is session) that reached this step. Zero at step 0 when reached;
+	 * omitted when no subjects or sessions reached this step.
+	 */
+	medianTimeFromStartMs?: number
+	/**
+	 * Exact median milliseconds from the preceding step among subjects (or
+	 * sessions when count_by is session) that reached this step. Zero at step 0
+	 * when reached; omitted when no subjects or sessions reached this step.
+	 */
+	medianTimeFromPreviousMs?: number
 }
 
 /** One event sequence across sessions. */
@@ -618,6 +630,8 @@ runtime.registerSchemas({
 		['breakdownValue', 'breakdown_value'],
 		['conversionFromStartPct', 'conversion_from_start_pct'],
 		['conversionFromPreviousPct', 'conversion_from_previous_pct'],
+		['medianTimeFromStartMs', 'median_time_from_start_ms'],
+		['medianTimeFromPreviousMs', 'median_time_from_previous_ms'],
 	],
 	'sylphx.analytics.v1.AnalyticsPath': [
 		['sessionCount', 'session_count'],

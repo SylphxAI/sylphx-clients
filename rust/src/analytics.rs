@@ -226,6 +226,24 @@ pub struct AnalyticsFunnelStep {
         alias = "conversionFromPreviousPct"
     )]
     pub conversion_from_previous_pct: f64,
+    /// Exact median milliseconds from step 0 among subjects (or sessions when
+    /// count_by is session) that reached this step. Zero at step 0 when reached;
+    /// omitted when no subjects or sessions reached this step.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "medianTimeFromStartMs"
+    )]
+    pub median_time_from_start_ms: Option<f64>,
+    /// Exact median milliseconds from the preceding step among subjects (or
+    /// sessions when count_by is session) that reached this step. Zero at step 0
+    /// when reached; omitted when no subjects or sessions reached this step.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "medianTimeFromPreviousMs"
+    )]
+    pub median_time_from_previous_ms: Option<f64>,
 }
 
 /// One event sequence across sessions.
