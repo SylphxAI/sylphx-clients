@@ -649,6 +649,11 @@ pub struct AgentSpec {
         alias = "readOnly"
     )]
     pub read_only: bool,
+    /// Sylphx AI routing policy for both pinned models on every turn. The
+    /// session inherits its immutable version's policy; omitting this uses AI's
+    /// existing defaults. Standard and ZDR cannot name training-tagged models.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "dataPolicy")]
+    pub data_policy: Option<String>,
 }
 
 /// AgentStatus is the observed state of an Agent.

@@ -1776,6 +1776,10 @@
             "$ref": "#/components/schemas/sylphx.agents.v1.AgentBudget",
             "description": "Retained for wire compatibility; has no runtime settings."
           },
+          "data_policy": {
+            "description": "Sylphx AI routing policy for both pinned models on every turn. The\nsession inherits its immutable version's policy; omitting this uses AI's\nexisting defaults. Standard and ZDR cannot name training-tagged models.",
+            "type": "string"
+          },
           "end_user_access": {
             "description": "Whether end-user session access is intended for this agent. Reserved\nuntil the backend enforces end-user ownership; all contract methods\ncurrently require a secret key.",
             "type": "boolean"

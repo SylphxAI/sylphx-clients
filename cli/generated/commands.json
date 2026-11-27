@@ -1715,6 +1715,12 @@
                   "type": "bool"
                 },
                 {
+                  "field": "agent.spec.data_policy",
+                  "flag": "--spec.data-policy",
+                  "summary": "Sylphx AI routing policy for both pinned models on every turn. The session inherits its immutable version's policy; omitting this uses AI's existing defaults. Standard and ZDR cannot name training-tagged models.",
+                  "type": "string"
+                },
+                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -1920,6 +1926,12 @@
                   "flag": "--spec.read-only",
                   "summary": "Read-only: the version holds no write grant, so it may verify another agent's work but never own it. Create and update refuse memory stores, MCP servers, `app_function` and `client` tools, the `memory`, `browser` and `computer` built-ins, and an HTTP tool whose pinned operation is not GET or HEAD unless it is `runtime_only`. The `shell` and `files` built-ins, and a `claude_code` or `codex` harness (which bring their own), need `environment.egress` that denies by default: `DENY`, or `ALLOWLIST` of the configured Sylphx API and inference gateways and the version's GET or HEAD tool hosts, with no CIDRs. Session create, `:send` and `:run` check the version and the session's effective environment again, and refuse any model-facing credential that is not a captured Access key holding only `<service>:read` and `ai:inference` scopes; a renewal's `credential_updates` value for a model-facing binding is held to the same rule. A run's `completion.result_fields` never map into the completion tool's path or query parameters. An OwnerPool never qualifies the version.",
                   "type": "bool"
+                },
+                {
+                  "field": "agent.spec.data_policy",
+                  "flag": "--spec.data-policy",
+                  "summary": "Sylphx AI routing policy for both pinned models on every turn. The session inherits its immutable version's policy; omitting this uses AI's existing defaults. Standard and ZDR cannot name training-tagged models.",
+                  "type": "string"
                 },
                 {
                   "field": "allow_missing",

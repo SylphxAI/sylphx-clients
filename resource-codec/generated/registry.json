@@ -11545,6 +11545,25 @@
             "kind": "scalar",
             "scalar": "bool"
           }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Sylphx AI routing policy for both pinned models on every turn. The\nsession inherits its immutable version's policy; omitting this uses AI's\nexisting defaults. Standard and ZDR cannot name training-tagged models.",
+          "filterable": false,
+          "name": "data_policy",
+          "number": 14,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
         }
       ],
       "name": "sylphx.agents.v1.AgentSpec",

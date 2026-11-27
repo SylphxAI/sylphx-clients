@@ -314,6 +314,12 @@ export interface AgentSpec {
 	 * the version.
 	 */
 	readOnly?: boolean
+	/**
+	 * Sylphx AI routing policy for both pinned models on every turn. The
+	 * session inherits its immutable version's policy; omitting this uses AI's
+	 * existing defaults. Standard and ZDR cannot name training-tagged models.
+	 */
+	dataPolicy?: string
 }
 
 /** AgentStatus is the observed state of an Agent. */
@@ -2159,6 +2165,7 @@ runtime.registerSchemas({
 		['environment', 'environment', 'sylphx.agents.v1.EnvironmentSpec'],
 		['models', 'models', 'sylphx.agents.v1.AgentModels'],
 		['readOnly', 'read_only'],
+		['dataPolicy', 'data_policy'],
 	],
 	'sylphx.agents.v1.AgentStatus': [
 		['observedGeneration', 'observed_generation'],
