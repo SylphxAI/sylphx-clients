@@ -28449,6 +28449,45 @@
                   "type": "bool"
                 },
                 {
+                  "field": "lease.spec.hardened_non_root.run_as_user",
+                  "flag": "--spec.hardened-non-root.run-as-user",
+                  "summary": "Numeric UID, at least 1000.",
+                  "type": "int"
+                },
+                {
+                  "field": "lease.spec.hardened_non_root.run_as_group",
+                  "flag": "--spec.hardened-non-root.run-as-group",
+                  "summary": "Numeric GID, at least 1000.",
+                  "type": "int"
+                },
+                {
+                  "field": "lease.spec.hardened_non_root.command",
+                  "flag": "--spec.hardened-non-root.command",
+                  "repeated": true,
+                  "summary": "Entrypoint vector; the first element must be an absolute executable path.",
+                  "type": "string"
+                },
+                {
+                  "field": "lease.spec.hardened_non_root.args",
+                  "flag": "--spec.hardened-non-root.args",
+                  "repeated": true,
+                  "summary": "Arguments appended to the command.",
+                  "type": "string"
+                },
+                {
+                  "field": "lease.spec.hardened_non_root.disable_exec",
+                  "flag": "--spec.hardened-non-root.disable-exec",
+                  "summary": "Required true. Exec, terminal and other guest data-plane access are disabled.",
+                  "type": "bool"
+                },
+                {
+                  "field": "lease.spec.hardened_non_root.secret_files",
+                  "flag": "--spec.hardened-non-root.secret-files",
+                  "repeated": true,
+                  "summary": "Immutable files delivered to the workload as owner-readable only.",
+                  "type": "json"
+                },
+                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",

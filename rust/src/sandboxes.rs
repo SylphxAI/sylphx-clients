@@ -885,6 +885,50 @@ pub struct GetVolumeRequest {
     pub name: String,
 }
 
+/// HardenedNonRootProfile launches a direct entrypoint as a non-root identity.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct HardenedNonRootProfile {
+    /// Numeric UID, at least 1000.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "runAsUser"
+    )]
+    pub run_as_user: i32,
+    /// Numeric GID, at least 1000.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "runAsGroup"
+    )]
+    pub run_as_group: i32,
+    /// Entrypoint vector; the first element must be an absolute executable path.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub command: Vec<String>,
+    /// Arguments appended to the command.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub args: Vec<String>,
+    /// Required true. Exec, terminal and other guest data-plane access are disabled.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "disableExec"
+    )]
+    pub disable_exec: bool,
+    /// Immutable files delivered to the workload as owner-readable only.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "secretFiles")]
+    pub secret_files: Vec<SecretFileMount>,
+}
+
 /// HoldKeyAction holds a combination down, then releases it.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -1360,6 +1404,15 @@ pub struct LeaseSpec {
     /// Field behavior: `immutable`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub device: Option<DeviceSpec>,
+    /// Cold non-root Kata workload; no interactive guest access or port tunnels.
+    ///
+    /// Field behavior: `immutable`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "hardenedNonRoot"
+    )]
+    pub hardened_non_root: Option<HardenedNonRootProfile>,
 }
 
 /// LeaseStatus is the observed state of a Lease.
@@ -2403,6 +2456,25 @@ pub struct ScrollAction {
     /// Keys held during the scroll, xdotool names.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub modifiers: Vec<String>,
+}
+
+/// SecretFileMount delivers an input-only payload to an exact absolute path.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SecretFileMount {
+    /// Plain absolute guest path, outside system and platform runtime directories.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub path: String,
+    /// 1–4096 decoded bytes; represented as base64 in ProtoJSON.
+    ///
+    /// Field behavior: `required`, `input_only`, `sensitive`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub content: String,
+    /// Decimal 256 (octal 0400); omitted uses that same mode.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mode: Option<i32>,
 }
 
 /// The request of SetLeaseNetwork.

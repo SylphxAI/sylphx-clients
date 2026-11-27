@@ -498,6 +498,22 @@ export interface GetVolumeRequest {
 	name: string
 }
 
+/** HardenedNonRootProfile launches a direct entrypoint as a non-root identity. */
+export interface HardenedNonRootProfile {
+	/** Numeric UID, at least 1000. */
+	runAsUser?: number
+	/** Numeric GID, at least 1000. */
+	runAsGroup?: number
+	/** Entrypoint vector; the first element must be an absolute executable path. */
+	command?: string[]
+	/** Arguments appended to the command. */
+	args?: string[]
+	/** Required true. Exec, terminal and other guest data-plane access are disabled. */
+	disableExec?: boolean
+	/** Immutable files delivered to the workload as owner-readable only. */
+	secretFiles?: SecretFileMount[]
+}
+
 /** HoldKeyAction holds a combination down, then releases it. */
 export interface HoldKeyAction {
 	/** The combination, xdotool syntax. */
@@ -760,6 +776,8 @@ export interface LeaseSpec {
 	 * ignored.
 	 */
 	device?: DeviceSpec
+	/** Cold non-root Kata workload; no interactive guest access or port tunnels. */
+	hardenedNonRoot?: HardenedNonRootProfile
 }
 
 /** LeaseStatus is the observed state of a Lease. */
@@ -1245,6 +1263,16 @@ export interface ScrollAction {
 	unit?: ScrollUnit
 	/** Keys held during the scroll, xdotool names. */
 	modifiers?: string[]
+}
+
+/** SecretFileMount delivers an input-only payload to an exact absolute path. */
+export interface SecretFileMount {
+	/** Plain absolute guest path, outside system and platform runtime directories. */
+	path?: string
+	/** 1–4096 decoded bytes; represented as base64 in ProtoJSON. */
+	content?: string
+	/** Decimal 256 (octal 0400); omitted uses that same mode. */
+	mode?: number
 }
 
 /** The request of SetLeaseNetwork. */
@@ -1741,6 +1769,12 @@ runtime.registerSchemas({
 	'sylphx.sandboxes.v1.GetShapeRequest': [],
 	'sylphx.sandboxes.v1.GetSnapshotRequest': [],
 	'sylphx.sandboxes.v1.GetVolumeRequest': [],
+	'sylphx.sandboxes.v1.HardenedNonRootProfile': [
+		['runAsUser', 'run_as_user'],
+		['runAsGroup', 'run_as_group'],
+		['disableExec', 'disable_exec'],
+		['secretFiles', 'secret_files', 'sylphx.sandboxes.v1.SecretFileMount'],
+	],
 	'sylphx.sandboxes.v1.HoldKeyAction': [],
 	'sylphx.sandboxes.v1.IceServer': [],
 	'sylphx.sandboxes.v1.InstallLeaseAppRequest': [
@@ -1798,6 +1832,7 @@ runtime.registerSchemas({
 		['sourceSnapshot', 'source_snapshot'],
 		['webhook', 'webhook', 'sylphx.sandboxes.v1.LeaseWebhook'],
 		['device', 'device', 'sylphx.sandboxes.v1.DeviceSpec'],
+		['hardenedNonRoot', 'hardened_non_root', 'sylphx.sandboxes.v1.HardenedNonRootProfile'],
 	],
 	'sylphx.sandboxes.v1.LeaseStatus': [
 		['observedGeneration', 'observed_generation'],
@@ -1945,6 +1980,7 @@ runtime.registerSchemas({
 		['deltaX', 'delta_x'],
 		['deltaY', 'delta_y'],
 	],
+	'sylphx.sandboxes.v1.SecretFileMount': [],
 	'sylphx.sandboxes.v1.SetLeaseNetworkRequest': [
 		['network', 'network', 'sylphx.sandboxes.v1.LeaseNetwork'],
 	],

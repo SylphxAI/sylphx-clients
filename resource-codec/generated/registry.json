@@ -140880,6 +140880,139 @@
       "package": "sylphx.sandboxes.v1"
     },
     {
+      "doc": "HardenedNonRootProfile launches a direct entrypoint as a non-root identity.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Numeric UID, at least 1000.",
+          "filterable": false,
+          "name": "run_as_user",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": null,
+              "minimum": 1000
+            }
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Numeric GID, at least 1000.",
+          "filterable": false,
+          "name": "run_as_group",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": null,
+              "minimum": 1000
+            }
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Entrypoint vector; the first element must be an absolute executable path.",
+          "filterable": false,
+          "name": "command",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Arguments appended to the command.",
+          "filterable": false,
+          "name": "args",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Required true. Exec, terminal and other guest data-plane access are disabled.",
+          "filterable": false,
+          "name": "disable_exec",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Immutable files delivered to the workload as owner-readable only.",
+          "filterable": false,
+          "name": "secret_files",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.sandboxes.v1.SecretFileMount"
+          }
+        }
+      ],
+      "name": "sylphx.sandboxes.v1.HardenedNonRootProfile",
+      "package": "sylphx.sandboxes.v1"
+    },
+    {
       "doc": "HoldKeyAction holds a combination down, then releases it.",
       "fields": [
         {
@@ -142189,6 +142322,26 @@
           "type": {
             "kind": "message",
             "name": "sylphx.sandboxes.v1.DeviceSpec"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL",
+            "IMMUTABLE"
+          ],
+          "cli_flag": "",
+          "doc": "Cold non-root Kata workload; no interactive guest access or port tunnels.",
+          "filterable": false,
+          "name": "hardened_non_root",
+          "number": 18,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.sandboxes.v1.HardenedNonRootProfile"
           }
         }
       ],
@@ -145108,6 +145261,71 @@
         }
       ],
       "name": "sylphx.sandboxes.v1.ScrollAction",
+      "package": "sylphx.sandboxes.v1"
+    },
+    {
+      "doc": "SecretFileMount delivers an input-only payload to an exact absolute path.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Plain absolute guest path, outside system and platform runtime directories.",
+          "filterable": false,
+          "name": "path",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED",
+            "INPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "1–4096 decoded bytes; represented as base64 in ProtoJSON.",
+          "filterable": false,
+          "name": "content",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": true,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bytes"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Decimal 256 (octal 0400); omitted uses that same mode.",
+          "filterable": false,
+          "name": "mode",
+          "number": 3,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        }
+      ],
+      "name": "sylphx.sandboxes.v1.SecretFileMount",
       "package": "sylphx.sandboxes.v1"
     },
     {

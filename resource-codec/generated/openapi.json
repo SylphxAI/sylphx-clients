@@ -46711,6 +46711,55 @@
         ],
         "type": "object"
       },
+      "sylphx.sandboxes.v1.HardenedNonRootProfile": {
+        "description": "HardenedNonRootProfile launches a direct entrypoint as a non-root identity.",
+        "properties": {
+          "args": {
+            "description": "Arguments appended to the command.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "command": {
+            "description": "Entrypoint vector; the first element must be an absolute executable path.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "disable_exec": {
+            "description": "Required true. Exec, terminal and other guest data-plane access are disabled.",
+            "type": "boolean"
+          },
+          "run_as_group": {
+            "description": "Numeric GID, at least 1000.",
+            "format": "int32",
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "run_as_user": {
+            "description": "Numeric UID, at least 1000.",
+            "format": "int32",
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "secret_files": {
+            "description": "Immutable files delivered to the workload as owner-readable only.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.sandboxes.v1.SecretFileMount"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "run_as_user",
+          "run_as_group",
+          "command",
+          "disable_exec"
+        ],
+        "type": "object"
+      },
       "sylphx.sandboxes.v1.HoldKeyAction": {
         "description": "HoldKeyAction holds a combination down, then releases it.",
         "properties": {
@@ -47105,6 +47154,11 @@
             },
             "description": "Plain environment variables. Secrets bind through Sylphx Secrets, never\nhere.",
             "type": "object",
+            "x-sylphx-immutable": true
+          },
+          "hardened_non_root": {
+            "$ref": "#/components/schemas/sylphx.sandboxes.v1.HardenedNonRootProfile",
+            "description": "Cold non-root Kata workload; no interactive guest access or port tunnels.",
             "x-sylphx-immutable": true
           },
           "idle_timeout": {
@@ -48244,6 +48298,32 @@
           "pixels"
         ],
         "type": "string"
+      },
+      "sylphx.sandboxes.v1.SecretFileMount": {
+        "description": "SecretFileMount delivers an input-only payload to an exact absolute path.",
+        "properties": {
+          "content": {
+            "contentEncoding": "base64",
+            "description": "1–4096 decoded bytes; represented as base64 in ProtoJSON.",
+            "type": "string",
+            "writeOnly": true,
+            "x-sylphx-sensitive": true
+          },
+          "mode": {
+            "description": "Decimal 256 (octal 0400); omitted uses that same mode.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "path": {
+            "description": "Plain absolute guest path, outside system and platform runtime directories.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "content"
+        ],
+        "type": "object"
       },
       "sylphx.sandboxes.v1.SetLeaseNetworkRequest": {
         "description": "The request of SetLeaseNetwork.",
