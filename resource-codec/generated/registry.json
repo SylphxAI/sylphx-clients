@@ -22622,6 +22622,64 @@
       "package": "sylphx.analytics.v1"
     },
     {
+      "doc": "One event sequence across sessions.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Event names in chronological order, starting or ending at the anchor.",
+          "filterable": false,
+          "name": "steps",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Exact count of sessions producing these steps.",
+          "filterable": false,
+          "name": "session_count",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Exact count of distinct stored subjects on the qualifying anchors.",
+          "filterable": false,
+          "name": "subject_count",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        }
+      ],
+      "name": "sylphx.analytics.v1.AnalyticsPath",
+      "package": "sylphx.analytics.v1"
+    },
+    {
       "doc": "Aggregate for one UTC cohort start and breakdown value.",
       "fields": [
         {
@@ -23724,6 +23782,130 @@
       "package": "sylphx.analytics.v1"
     },
     {
+      "doc": "Session paths inside the query interval. Set exactly one anchor.",
+      "fields": [
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Start at the first qualifying occurrence of this event in each session.",
+          "filterable": false,
+          "name": "start_event",
+          "number": 1,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "End at the first qualifying occurrence of this event in each session.",
+          "filterable": false,
+          "name": "end_event",
+          "number": 2,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Up to 16 step event names; empty includes all. The anchor name is always\nincluded. This filter does not change session boundaries.",
+          "filterable": false,
+          "name": "event_names",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Up to four exact string matches on the anchor only. Keys use the session\nbreakdown-property grammar; values are at most 128 bytes.",
+          "filterable": false,
+          "name": "property_filters",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "map",
+            "value": {
+              "kind": "scalar",
+              "scalar": "string"
+            }
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Maximum steps including the anchor. Defaults to 5; clamped to 2–10.",
+          "filterable": false,
+          "name": "max_steps",
+          "number": 5,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Maximum paths returned. Defaults to 20; clamped to 1–50.",
+          "filterable": false,
+          "name": "limit",
+          "number": 6,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        }
+      ],
+      "name": "sylphx.analytics.v1.PathsQuery",
+      "package": "sylphx.analytics.v1"
+    },
+    {
       "doc": "The request of QueryAnalyticsEvents. Select exactly one query mode.",
       "fields": [
         {
@@ -23788,7 +23970,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "Time buckets, counts, and an optional property sum. Set exactly one of\nrollup, funnel, retention, active_users, or sessions.",
+          "doc": "Time buckets, counts, and an optional property sum. Set exactly one of\nrollup, funnel, retention, active_users, sessions, or paths.",
           "filterable": false,
           "name": "rollup",
           "number": 4,
@@ -23883,7 +24065,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "Case-sensitive IANA reporting time zone for calendar buckets; defaults to UTC.\nBucket starts are UTC instants; the query interval and funnel are unchanged.",
+          "doc": "Case-sensitive IANA reporting time zone for calendar buckets; defaults to UTC.\nBucket starts are UTC instants; the query interval, funnels, and paths are unchanged.",
           "filterable": false,
           "name": "time_zone",
           "number": 9,
@@ -23895,6 +24077,25 @@
           "type": {
             "kind": "scalar",
             "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Ranked event sequences before or after an anchor in each session.",
+          "filterable": false,
+          "name": "paths",
+          "number": 10,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.analytics.v1.PathsQuery"
           }
         }
       ],
@@ -23987,6 +24188,23 @@
           "type": {
             "kind": "message",
             "name": "sylphx.analytics.v1.AnalyticsSessionBucket"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Nonempty paths ranked by session count, then subject count (both descending),\nthen lexicographically by steps.",
+          "filterable": false,
+          "name": "paths",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.analytics.v1.AnalyticsPath"
           }
         }
       ],

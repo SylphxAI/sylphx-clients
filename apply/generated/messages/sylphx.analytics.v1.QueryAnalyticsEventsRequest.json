@@ -161,6 +161,24 @@
         "kind": "scalar",
         "scalar": "string"
       }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "paths",
+      "number": 10,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "message",
+        "name": "sylphx.analytics.v1.PathsQuery"
+      }
     }
   ],
   "name": "sylphx.analytics.v1.QueryAnalyticsEventsRequest",

@@ -6939,6 +6939,45 @@
             "type": "string",
             "x-sylphx-resource-reference": "analytics.sylphx.com/AnalyticsEvent"
           },
+          "paths": {
+            "additionalProperties": false,
+            "description": "Ranked event sequences before or after an anchor in each session.",
+            "properties": {
+              "end_event": {
+                "description": "End at the first qualifying occurrence of this event in each session.",
+                "type": "string"
+              },
+              "event_names": {
+                "description": "Up to 16 step event names; empty includes all. The anchor name is always\nincluded. This filter does not change session boundaries.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "limit": {
+                "description": "Maximum paths returned. Defaults to 20; clamped to 1–50.",
+                "format": "int32",
+                "type": "integer"
+              },
+              "max_steps": {
+                "description": "Maximum steps including the anchor. Defaults to 5; clamped to 2–10.",
+                "format": "int32",
+                "type": "integer"
+              },
+              "property_filters": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Up to four exact string matches on the anchor only. Keys use the session\nbreakdown-property grammar; values are at most 128 bytes.",
+                "type": "object"
+              },
+              "start_event": {
+                "description": "Start at the first qualifying occurrence of this event in each session.",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
           "retention": {
             "additionalProperties": false,
             "description": "Calendar cohorts and exact subject retention by period.",
@@ -6989,7 +7028,7 @@
           },
           "rollup": {
             "additionalProperties": false,
-            "description": "Time buckets, counts, and an optional property sum. Set exactly one of\nrollup, funnel, retention, active_users, or sessions.",
+            "description": "Time buckets, counts, and an optional property sum. Set exactly one of\nrollup, funnel, retention, active_users, sessions, or paths.",
             "properties": {
               "event_names": {
                 "description": "Up to 16 event names to include. Empty includes all names.",
@@ -7064,7 +7103,7 @@
             "type": "string"
           },
           "time_zone": {
-            "description": "Case-sensitive IANA reporting time zone for calendar buckets; defaults to UTC.\nBucket starts are UTC instants; the query interval and funnel are unchanged.",
+            "description": "Case-sensitive IANA reporting time zone for calendar buckets; defaults to UTC.\nBucket starts are UTC instants; the query interval, funnels, and paths are unchanged.",
             "type": "string"
           }
         },
@@ -53949,6 +53988,45 @@
             "type": "string",
             "x-sylphx-resource-reference": "analytics.sylphx.com/AnalyticsEvent"
           },
+          "paths": {
+            "additionalProperties": false,
+            "description": "Ranked event sequences before or after an anchor in each session.",
+            "properties": {
+              "end_event": {
+                "description": "End at the first qualifying occurrence of this event in each session.",
+                "type": "string"
+              },
+              "event_names": {
+                "description": "Up to 16 step event names; empty includes all. The anchor name is always\nincluded. This filter does not change session boundaries.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "limit": {
+                "description": "Maximum paths returned. Defaults to 20; clamped to 1–50.",
+                "format": "int32",
+                "type": "integer"
+              },
+              "max_steps": {
+                "description": "Maximum steps including the anchor. Defaults to 5; clamped to 2–10.",
+                "format": "int32",
+                "type": "integer"
+              },
+              "property_filters": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Up to four exact string matches on the anchor only. Keys use the session\nbreakdown-property grammar; values are at most 128 bytes.",
+                "type": "object"
+              },
+              "start_event": {
+                "description": "Start at the first qualifying occurrence of this event in each session.",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
           "retention": {
             "additionalProperties": false,
             "description": "Calendar cohorts and exact subject retention by period.",
@@ -53999,7 +54077,7 @@
           },
           "rollup": {
             "additionalProperties": false,
-            "description": "Time buckets, counts, and an optional property sum. Set exactly one of\nrollup, funnel, retention, active_users, or sessions.",
+            "description": "Time buckets, counts, and an optional property sum. Set exactly one of\nrollup, funnel, retention, active_users, sessions, or paths.",
             "properties": {
               "event_names": {
                 "description": "Up to 16 event names to include. Empty includes all names.",
@@ -54074,7 +54152,7 @@
             "type": "string"
           },
           "time_zone": {
-            "description": "Case-sensitive IANA reporting time zone for calendar buckets; defaults to UTC.\nBucket starts are UTC instants; the query interval and funnel are unchanged.",
+            "description": "Case-sensitive IANA reporting time zone for calendar buckets; defaults to UTC.\nBucket starts are UTC instants; the query interval, funnels, and paths are unchanged.",
             "type": "string"
           }
         },

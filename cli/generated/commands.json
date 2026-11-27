@@ -4250,7 +4250,7 @@
                 {
                   "field": "rollup",
                   "flag": "--rollup",
-                  "summary": "Time buckets, counts, and an optional property sum. Set exactly one of rollup, funnel, retention, active_users, or sessions.",
+                  "summary": "Time buckets, counts, and an optional property sum. Set exactly one of rollup, funnel, retention, active_users, sessions, or paths.",
                   "type": "json"
                 },
                 {
@@ -4280,8 +4280,14 @@
                 {
                   "field": "time_zone",
                   "flag": "--time-zone",
-                  "summary": "Case-sensitive IANA reporting time zone for calendar buckets; defaults to UTC. Bucket starts are UTC instants; the query interval and funnel are unchanged.",
+                  "summary": "Case-sensitive IANA reporting time zone for calendar buckets; defaults to UTC. Bucket starts are UTC instants; the query interval, funnels, and paths are unchanged.",
                   "type": "string"
+                },
+                {
+                  "field": "paths",
+                  "flag": "--paths",
+                  "summary": "Ranked event sequences before or after an anchor in each session.",
+                  "type": "json"
                 }
               ],
               "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/analytics_events:query",

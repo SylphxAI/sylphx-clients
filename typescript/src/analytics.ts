@@ -118,6 +118,16 @@ export interface AnalyticsFunnelStep {
 	conversionFromPreviousPct?: number
 }
 
+/** One event sequence across sessions. */
+export interface AnalyticsPath {
+	/** Event names in chronological order, starting or ending at the anchor. */
+	steps?: string[]
+	/** Exact count of sessions producing these steps. */
+	sessionCount?: string
+	/** Exact count of distinct stored subjects on the qualifying anchors. */
+	subjectCount?: string
+}
+
 /** Aggregate for one UTC cohort start and breakdown value. */
 export interface AnalyticsRetentionCohort {
 	/** The UTC start of the cohort period. */
@@ -338,6 +348,28 @@ export interface ListAnalyticsEventsResponse {
 	nextPageToken?: string
 }
 
+/** Session paths inside the query interval. Set exactly one anchor. */
+export interface PathsQuery {
+	/** Start at the first qualifying occurrence of this event in each session. */
+	startEvent?: string
+	/** End at the first qualifying occurrence of this event in each session. */
+	endEvent?: string
+	/**
+	 * Up to 16 step event names; empty includes all. The anchor name is always
+	 * included. This filter does not change session boundaries.
+	 */
+	eventNames?: string[]
+	/**
+	 * Up to four exact string matches on the anchor only. Keys use the session
+	 * breakdown-property grammar; values are at most 128 bytes.
+	 */
+	propertyFilters?: Record<string, string>
+	/** Maximum steps including the anchor. Defaults to 5; clamped to 2–10. */
+	maxSteps?: number
+	/** Maximum paths returned. Defaults to 20; clamped to 1–50. */
+	limit?: number
+}
+
 /** The request of QueryAnalyticsEvents. Select exactly one query mode. */
 export interface QueryAnalyticsEventsRequest {
 	/** The environment whose events to query. */
@@ -348,7 +380,7 @@ export interface QueryAnalyticsEventsRequest {
 	endTime?: string
 	/**
 	 * Time buckets, counts, and an optional property sum. Set exactly one of
-	 * rollup, funnel, retention, active_users, or sessions.
+	 * rollup, funnel, retention, active_users, sessions, or paths.
 	 */
 	rollup?: RollupQuery
 	/** Ordered conversion steps. */
@@ -361,9 +393,11 @@ export interface QueryAnalyticsEventsRequest {
 	sessions?: SessionsQuery
 	/**
 	 * Case-sensitive IANA reporting time zone for calendar buckets; defaults to UTC.
-	 * Bucket starts are UTC instants; the query interval and funnel are unchanged.
+	 * Bucket starts are UTC instants; the query interval, funnels, and paths are unchanged.
 	 */
 	timeZone?: string
+	/** Ranked event sequences before or after an anchor in each session. */
+	paths?: PathsQuery
 }
 
 /** The response of QueryAnalyticsEvents. Only the requested result is populated. */
@@ -387,6 +421,11 @@ export interface QueryAnalyticsEventsResponse {
 	 * and breakdown value ascending. Empty windows have no buckets.
 	 */
 	sessionBuckets?: AnalyticsSessionBucket[]
+	/**
+	 * Nonempty paths ranked by session count, then subject count (both descending),
+	 * then lexicographically by steps.
+	 */
+	paths?: AnalyticsPath[]
 }
 
 /**
@@ -516,6 +555,10 @@ runtime.registerSchemas({
 		['conversionFromStartPct', 'conversion_from_start_pct'],
 		['conversionFromPreviousPct', 'conversion_from_previous_pct'],
 	],
+	'sylphx.analytics.v1.AnalyticsPath': [
+		['sessionCount', 'session_count'],
+		['subjectCount', 'subject_count'],
+	],
 	'sylphx.analytics.v1.AnalyticsRetentionCohort': [
 		['cohortStart', 'cohort_start'],
 		['breakdownValue', 'breakdown_value'],
@@ -581,6 +624,13 @@ runtime.registerSchemas({
 		['analyticsEvents', 'analytics_events', 'sylphx.analytics.v1.AnalyticsEvent'],
 		['nextPageToken', 'next_page_token'],
 	],
+	'sylphx.analytics.v1.PathsQuery': [
+		['startEvent', 'start_event'],
+		['endEvent', 'end_event'],
+		['eventNames', 'event_names'],
+		['propertyFilters', 'property_filters', undefined, 'map'],
+		['maxSteps', 'max_steps'],
+	],
 	'sylphx.analytics.v1.QueryAnalyticsEventsRequest': [
 		['startTime', 'start_time'],
 		['endTime', 'end_time'],
@@ -590,6 +640,7 @@ runtime.registerSchemas({
 		['activeUsers', 'active_users', 'sylphx.analytics.v1.ActiveUsersQuery'],
 		['sessions', 'sessions', 'sylphx.analytics.v1.SessionsQuery'],
 		['timeZone', 'time_zone'],
+		['paths', 'paths', 'sylphx.analytics.v1.PathsQuery'],
 	],
 	'sylphx.analytics.v1.QueryAnalyticsEventsResponse': [
 		['rollupBuckets', 'rollup_buckets', 'sylphx.analytics.v1.AnalyticsRollupBucket'],
@@ -597,6 +648,7 @@ runtime.registerSchemas({
 		['retentionCohorts', 'retention_cohorts', 'sylphx.analytics.v1.AnalyticsRetentionCohort'],
 		['activeUserBuckets', 'active_user_buckets', 'sylphx.analytics.v1.AnalyticsActiveUsersBucket'],
 		['sessionBuckets', 'session_buckets', 'sylphx.analytics.v1.AnalyticsSessionBucket'],
+		['paths', 'paths', 'sylphx.analytics.v1.AnalyticsPath'],
 	],
 	'sylphx.analytics.v1.RetentionQuery': [
 		['cohortEvent', 'cohort_event'],

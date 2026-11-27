@@ -5774,6 +5774,29 @@
         },
         "type": "object"
       },
+      "sylphx.analytics.v1.AnalyticsPath": {
+        "description": "One event sequence across sessions.",
+        "properties": {
+          "session_count": {
+            "description": "Exact count of sessions producing these steps.",
+            "format": "int64",
+            "type": "string"
+          },
+          "steps": {
+            "description": "Event names in chronological order, starting or ending at the anchor.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "subject_count": {
+            "description": "Exact count of distinct stored subjects on the qualifying anchors.",
+            "format": "int64",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.analytics.v1.AnalyticsRetentionCohort": {
         "description": "Aggregate for one UTC cohort start and breakdown value.",
         "properties": {
@@ -6149,6 +6172,44 @@
         },
         "type": "object"
       },
+      "sylphx.analytics.v1.PathsQuery": {
+        "description": "Session paths inside the query interval. Set exactly one anchor.",
+        "properties": {
+          "end_event": {
+            "description": "End at the first qualifying occurrence of this event in each session.",
+            "type": "string"
+          },
+          "event_names": {
+            "description": "Up to 16 step event names; empty includes all. The anchor name is always\nincluded. This filter does not change session boundaries.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "limit": {
+            "description": "Maximum paths returned. Defaults to 20; clamped to 1–50.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "max_steps": {
+            "description": "Maximum steps including the anchor. Defaults to 5; clamped to 2–10.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "property_filters": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Up to four exact string matches on the anchor only. Keys use the session\nbreakdown-property grammar; values are at most 128 bytes.",
+            "type": "object"
+          },
+          "start_event": {
+            "description": "Start at the first qualifying occurrence of this event in each session.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.analytics.v1.QueryAnalyticsEventsRequest": {
         "description": "The request of QueryAnalyticsEvents. Select exactly one query mode.",
         "properties": {
@@ -6170,13 +6231,17 @@
             "type": "string",
             "x-sylphx-resource-reference": "analytics.sylphx.com/AnalyticsEvent"
           },
+          "paths": {
+            "$ref": "#/components/schemas/sylphx.analytics.v1.PathsQuery",
+            "description": "Ranked event sequences before or after an anchor in each session."
+          },
           "retention": {
             "$ref": "#/components/schemas/sylphx.analytics.v1.RetentionQuery",
             "description": "Calendar cohorts and exact subject retention by period."
           },
           "rollup": {
             "$ref": "#/components/schemas/sylphx.analytics.v1.RollupQuery",
-            "description": "Time buckets, counts, and an optional property sum. Set exactly one of\nrollup, funnel, retention, active_users, or sessions."
+            "description": "Time buckets, counts, and an optional property sum. Set exactly one of\nrollup, funnel, retention, active_users, sessions, or paths."
           },
           "sessions": {
             "$ref": "#/components/schemas/sylphx.analytics.v1.SessionsQuery",
@@ -6188,7 +6253,7 @@
             "type": "string"
           },
           "time_zone": {
-            "description": "Case-sensitive IANA reporting time zone for calendar buckets; defaults to UTC.\nBucket starts are UTC instants; the query interval and funnel are unchanged.",
+            "description": "Case-sensitive IANA reporting time zone for calendar buckets; defaults to UTC.\nBucket starts are UTC instants; the query interval, funnels, and paths are unchanged.",
             "type": "string"
           }
         },
@@ -6212,6 +6277,13 @@
             "description": "Steps in request order within each breakdown, ranked by starters descending\nthen by breakdown value ascending.",
             "items": {
               "$ref": "#/components/schemas/sylphx.analytics.v1.AnalyticsFunnelStep"
+            },
+            "type": "array"
+          },
+          "paths": {
+            "description": "Nonempty paths ranked by session count, then subject count (both descending),\nthen lexicographically by steps.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.analytics.v1.AnalyticsPath"
             },
             "type": "array"
           },
@@ -71098,13 +71170,17 @@
                     "$ref": "#/components/schemas/sylphx.analytics.v1.FunnelQuery",
                     "description": "Ordered conversion steps."
                   },
+                  "paths": {
+                    "$ref": "#/components/schemas/sylphx.analytics.v1.PathsQuery",
+                    "description": "Ranked event sequences before or after an anchor in each session."
+                  },
                   "retention": {
                     "$ref": "#/components/schemas/sylphx.analytics.v1.RetentionQuery",
                     "description": "Calendar cohorts and exact subject retention by period."
                   },
                   "rollup": {
                     "$ref": "#/components/schemas/sylphx.analytics.v1.RollupQuery",
-                    "description": "Time buckets, counts, and an optional property sum. Set exactly one of\nrollup, funnel, retention, active_users, or sessions."
+                    "description": "Time buckets, counts, and an optional property sum. Set exactly one of\nrollup, funnel, retention, active_users, sessions, or paths."
                   },
                   "sessions": {
                     "$ref": "#/components/schemas/sylphx.analytics.v1.SessionsQuery",
@@ -71116,7 +71192,7 @@
                     "type": "string"
                   },
                   "time_zone": {
-                    "description": "Case-sensitive IANA reporting time zone for calendar buckets; defaults to UTC.\nBucket starts are UTC instants; the query interval and funnel are unchanged.",
+                    "description": "Case-sensitive IANA reporting time zone for calendar buckets; defaults to UTC.\nBucket starts are UTC instants; the query interval, funnels, and paths are unchanged.",
                     "type": "string"
                   }
                 },

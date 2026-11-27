@@ -225,6 +225,31 @@ pub struct AnalyticsFunnelStep {
     pub conversion_from_previous_pct: f64,
 }
 
+/// One event sequence across sessions.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct AnalyticsPath {
+    /// Event names in chronological order, starting or ending at the anchor.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub steps: Vec<String>,
+    /// Exact count of sessions producing these steps.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "sessionCount"
+    )]
+    pub session_count: i64,
+    /// Exact count of distinct stored subjects on the qualifying anchors.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "subjectCount"
+    )]
+    pub subject_count: i64,
+}
+
 /// Aggregate for one UTC cohort start and breakdown value.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -665,6 +690,36 @@ pub struct ListAnalyticsEventsResponse {
     pub next_page_token: String,
 }
 
+/// Session paths inside the query interval. Set exactly one anchor.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct PathsQuery {
+    /// Start at the first qualifying occurrence of this event in each session.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "startEvent")]
+    pub start_event: Option<String>,
+    /// End at the first qualifying occurrence of this event in each session.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "endEvent")]
+    pub end_event: Option<String>,
+    /// Up to 16 step event names; empty includes all. The anchor name is always
+    /// included. This filter does not change session boundaries.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "eventNames")]
+    pub event_names: Vec<String>,
+    /// Up to four exact string matches on the anchor only. Keys use the session
+    /// breakdown-property grammar; values are at most 128 bytes.
+    #[serde(
+        default,
+        skip_serializing_if = "std::collections::BTreeMap::is_empty",
+        alias = "propertyFilters"
+    )]
+    pub property_filters: std::collections::BTreeMap<String, String>,
+    /// Maximum steps including the anchor. Defaults to 5; clamped to 2–10.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "maxSteps")]
+    pub max_steps: Option<i32>,
+    /// Maximum paths returned. Defaults to 20; clamped to 1–50.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub limit: Option<i32>,
+}
+
 /// The request of QueryAnalyticsEvents. Select exactly one query mode.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -691,7 +746,7 @@ pub struct QueryAnalyticsEventsRequest {
     )]
     pub end_time: String,
     /// Time buckets, counts, and an optional property sum. Set exactly one of
-    /// rollup, funnel, retention, active_users, or sessions.
+    /// rollup, funnel, retention, active_users, sessions, or paths.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rollup: Option<RollupQuery>,
     /// Ordered conversion steps.
@@ -711,13 +766,16 @@ pub struct QueryAnalyticsEventsRequest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sessions: Option<SessionsQuery>,
     /// Case-sensitive IANA reporting time zone for calendar buckets; defaults to UTC.
-    /// Bucket starts are UTC instants; the query interval and funnel are unchanged.
+    /// Bucket starts are UTC instants; the query interval, funnels, and paths are unchanged.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
         alias = "timeZone"
     )]
     pub time_zone: String,
+    /// Ranked event sequences before or after an anchor in each session.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub paths: Option<PathsQuery>,
 }
 
 /// The response of QueryAnalyticsEvents. Only the requested result is populated.
@@ -758,6 +816,10 @@ pub struct QueryAnalyticsEventsResponse {
         alias = "sessionBuckets"
     )]
     pub session_buckets: Vec<AnalyticsSessionBucket>,
+    /// Nonempty paths ranked by session count, then subject count (both descending),
+    /// then lexicographically by steps.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub paths: Vec<AnalyticsPath>,
 }
 
 /// Exact subject retention by UTC calendar period. A subject enters at their
