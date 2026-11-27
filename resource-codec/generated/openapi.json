@@ -30226,6 +30226,18 @@
             "readOnly": true,
             "type": "string"
           },
+          "amount_shipping": {
+            "description": "Settled shipping charge excluding tax, in minor units of currency_code.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "amount_subtotal": {
+            "description": "Settled merchandise total after discounts, excluding tax and shipping,\nin minor units of currency_code. Present only with a verified breakdown.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
           "amount_tax": {
             "description": "Tax collected on the checkout session in minor units, when reported.",
             "format": "int64",
@@ -30400,6 +30412,14 @@
             "description": "Processor subscription id created by this checkout, when mode is `subscription`.",
             "readOnly": true,
             "type": "string"
+          },
+          "settled_items": {
+            "description": "Settled processor lines, not the items requested at checkout creation.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.money.v1.SettledCheckoutItem"
+            },
+            "readOnly": true,
+            "type": "array"
           },
           "shipping_address": {
             "$ref": "#/components/schemas/sylphx.money.v1.ShippingAddress",
@@ -34247,6 +34267,40 @@
           "name",
           "quantity_used"
         ],
+        "type": "object"
+      },
+      "sylphx.money.v1.SettledCheckoutItem": {
+        "description": "One processor-settled checkout line, in the checkout's currency.",
+        "properties": {
+          "amount_subtotal_minor": {
+            "description": "Line total after discounts, excluding tax and shipping, in minor units.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "price_key": {
+            "description": "Stable catalog price key.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "product_key": {
+            "description": "Stable catalog product key.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "quantity": {
+            "description": "Quantity settled by the processor.",
+            "format": "int32",
+            "readOnly": true,
+            "type": "integer"
+          },
+          "unit_amount_minor": {
+            "description": "Exact net per-unit amount in minor units, excluding tax and shipping.\nAbsent if the line's net amount does not divide evenly by quantity.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "sylphx.money.v1.ShippingAddress": {

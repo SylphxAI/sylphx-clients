@@ -93195,6 +93195,63 @@
             "kind": "scalar",
             "scalar": "string"
           }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Settled merchandise total after discounts, excluding tax and shipping,\nin minor units of currency_code. Present only with a verified breakdown.",
+          "filterable": false,
+          "name": "amount_subtotal",
+          "number": 50,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Settled shipping charge excluding tax, in minor units of currency_code.",
+          "filterable": false,
+          "name": "amount_shipping",
+          "number": 51,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Settled processor lines, not the items requested at checkout creation.",
+          "filterable": false,
+          "name": "settled_items",
+          "number": 52,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.money.v1.SettledCheckoutItem"
+          }
         }
       ],
       "name": "sylphx.money.v1.CheckoutSession",
@@ -104354,6 +104411,108 @@
         }
       ],
       "name": "sylphx.money.v1.SettleUsageReservationRequest",
+      "package": "sylphx.money.v1"
+    },
+    {
+      "doc": "One processor-settled checkout line, in the checkout's currency.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Stable catalog price key.",
+          "filterable": false,
+          "name": "price_key",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Stable catalog product key.",
+          "filterable": false,
+          "name": "product_key",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Quantity settled by the processor.",
+          "filterable": false,
+          "name": "quantity",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Exact net per-unit amount in minor units, excluding tax and shipping.\nAbsent if the line's net amount does not divide evenly by quantity.",
+          "filterable": false,
+          "name": "unit_amount_minor",
+          "number": 4,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Line total after discounts, excluding tax and shipping, in minor units.",
+          "filterable": false,
+          "name": "amount_subtotal_minor",
+          "number": 5,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.SettledCheckoutItem",
       "package": "sylphx.money.v1"
     },
     {

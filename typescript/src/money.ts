@@ -658,6 +658,15 @@ export interface CheckoutSession {
 	 * server conversions deduplicate. Empty before the checkout is paid.
 	 */
 	readonly transactionId?: string
+	/**
+	 * Settled merchandise total after discounts, excluding tax and shipping,
+	 * in minor units of currency_code. Present only with a verified breakdown.
+	 */
+	readonly amountSubtotal?: string
+	/** Settled shipping charge excluding tax, in minor units of currency_code. */
+	readonly amountShipping?: string
+	/** Settled processor lines, not the items requested at checkout creation. */
+	readonly settledItems?: SettledCheckoutItem[]
 }
 
 /** Request to claim dispatch using the reserved hold. */
@@ -2653,6 +2662,23 @@ export interface SettleUsageReservationRequest {
 	occurredTime?: string
 }
 
+/** One processor-settled checkout line, in the checkout's currency. */
+export interface SettledCheckoutItem {
+	/** Stable catalog price key. */
+	readonly priceKey?: string
+	/** Stable catalog product key. */
+	readonly productKey?: string
+	/** Quantity settled by the processor. */
+	readonly quantity?: number
+	/**
+	 * Exact net per-unit amount in minor units, excluding tax and shipping.
+	 * Absent if the line's net amount does not divide evenly by quantity.
+	 */
+	readonly unitAmountMinor?: string
+	/** Line total after discounts, excluding tax and shipping, in minor units. */
+	readonly amountSubtotalMinor?: string
+}
+
 /** A shipping address collected by the hosted checkout for a physical order. */
 export interface ShippingAddress {
 	/** Recipient name. */
@@ -3682,6 +3708,9 @@ runtime.registerSchemas({
 		['claimSecret', 'claim_secret'],
 		['claimSecretExpiresAt', 'claim_secret_expires_at'],
 		['transactionId', 'transaction_id'],
+		['amountSubtotal', 'amount_subtotal'],
+		['amountShipping', 'amount_shipping'],
+		['settledItems', 'settled_items', 'sylphx.money.v1.SettledCheckoutItem'],
 	],
 	'sylphx.money.v1.ClaimPlatformUsageHoldRequest': [
 		['payerOrg', 'payer_org'],
@@ -4228,6 +4257,12 @@ runtime.registerSchemas({
 	'sylphx.money.v1.SettleUsageReservationRequest': [
 		['quantityUsed', 'quantity_used'],
 		['occurredTime', 'occurred_time'],
+	],
+	'sylphx.money.v1.SettledCheckoutItem': [
+		['priceKey', 'price_key'],
+		['productKey', 'product_key'],
+		['unitAmountMinor', 'unit_amount_minor'],
+		['amountSubtotalMinor', 'amount_subtotal_minor'],
 	],
 	'sylphx.money.v1.ShippingAddress': [
 		['postalCode', 'postal_code'],

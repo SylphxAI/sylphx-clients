@@ -1479,6 +1479,32 @@ pub struct CheckoutSession {
         alias = "transactionId"
     )]
     pub transaction_id: String,
+    /// Settled merchandise total after discounts, excluding tax and shipping,
+    /// in minor units of currency_code. Present only with a verified breakdown.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "crate::runtime::opt_int64",
+        alias = "amountSubtotal"
+    )]
+    pub amount_subtotal: Option<i64>,
+    /// Settled shipping charge excluding tax, in minor units of currency_code.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "crate::runtime::opt_int64",
+        alias = "amountShipping"
+    )]
+    pub amount_shipping: Option<i64>,
+    /// Settled processor lines, not the items requested at checkout creation.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "settledItems")]
+    pub settled_items: Vec<SettledCheckoutItem>,
 }
 
 /// Request to claim dispatch using the reserved hold.
@@ -5771,6 +5797,56 @@ pub struct SettleUsageReservationRequest {
         alias = "occurredTime"
     )]
     pub occurred_time: String,
+}
+
+/// One processor-settled checkout line, in the checkout's currency.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SettledCheckoutItem {
+    /// Stable catalog price key.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "priceKey"
+    )]
+    pub price_key: String,
+    /// Stable catalog product key.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "productKey"
+    )]
+    pub product_key: String,
+    /// Quantity settled by the processor.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub quantity: i32,
+    /// Exact net per-unit amount in minor units, excluding tax and shipping.
+    /// Absent if the line's net amount does not divide evenly by quantity.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "crate::runtime::opt_int64",
+        alias = "unitAmountMinor"
+    )]
+    pub unit_amount_minor: Option<i64>,
+    /// Line total after discounts, excluding tax and shipping, in minor units.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "crate::runtime::opt_int64",
+        alias = "amountSubtotalMinor"
+    )]
+    pub amount_subtotal_minor: Option<i64>,
 }
 
 /// A shipping address collected by the hosted checkout for a physical order.
