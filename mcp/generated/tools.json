@@ -6856,8 +6856,15 @@
                 "description": "Top-level string property per qualifying event. Omit for unsegmented\nbuckets. A dot is literal, not a path. Missing or non-string values\ngroup with the empty string. A subject may contribute to multiple groups.",
                 "type": "string"
               },
+              "event_names": {
+                "description": "Up to 16 event names to include. Empty includes all names.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
               "interval": {
-                "description": "UTC calendar day, Monday-start week, or calendar month (not trailing\n7- or 30-day counts). Only events inside the requested window contribute.",
+                "description": "Calendar day, Monday-start week, or calendar month (not trailing 7- or\n30-day counts). Only events inside the requested window contribute.",
                 "enum": [
                   "day",
                   "week",
@@ -53784,8 +53791,15 @@
                 "description": "Top-level string property per qualifying event. Omit for unsegmented\nbuckets. A dot is literal, not a path. Missing or non-string values\ngroup with the empty string. A subject may contribute to multiple groups.",
                 "type": "string"
               },
+              "event_names": {
+                "description": "Up to 16 event names to include. Empty includes all names.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
               "interval": {
-                "description": "UTC calendar day, Monday-start week, or calendar month (not trailing\n7- or 30-day counts). Only events inside the requested window contribute.",
+                "description": "Calendar day, Monday-start week, or calendar month (not trailing 7- or\n30-day counts). Only events inside the requested window contribute.",
                 "enum": [
                   "day",
                   "week",

@@ -3,13 +3,13 @@
 
 #![allow(clippy::all)]
 
-/// Exact distinct active subjects in UTC calendar buckets. Partial buckets
-/// count only activity inside the query interval, not trailing 7 or 30 days.
+/// Exact distinct active subjects in calendar buckets in the reporting time
+/// zone (UTC by default). Partial buckets count only in-window activity.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct ActiveUsersQuery {
-    /// UTC calendar day, Monday-start week, or calendar month (not trailing
-    /// 7- or 30-day counts). Only events inside the requested window contribute.
+    /// Calendar day, Monday-start week, or calendar month (not trailing 7- or
+    /// 30-day counts). Only events inside the requested window contribute.
     ///
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -34,13 +34,16 @@ pub struct ActiveUsersQuery {
     /// Maximum bucket rows returned. Defaults to 100; clamped to 1–500.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub limit: Option<i32>,
+    /// Up to 16 event names to include. Empty includes all names.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "eventNames")]
+    pub event_names: Vec<String>,
 }
 
 /// Active users for one bucket and breakdown value.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct AnalyticsActiveUsersBucket {
-    /// The UTC start of the calendar bucket, which may precede start_time.
+    /// The calendar bucket start as a UTC instant, which may precede start_time.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",

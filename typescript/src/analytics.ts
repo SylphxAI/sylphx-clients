@@ -6,13 +6,13 @@ import './common.js'
 import type * as common from './common.js'
 
 /**
- * Exact distinct active subjects in UTC calendar buckets. Partial buckets
- * count only activity inside the query interval, not trailing 7 or 30 days.
+ * Exact distinct active subjects in calendar buckets in the reporting time
+ * zone (UTC by default). Partial buckets count only in-window activity.
  */
 export interface ActiveUsersQuery {
 	/**
-	 * UTC calendar day, Monday-start week, or calendar month (not trailing
-	 * 7- or 30-day counts). Only events inside the requested window contribute.
+	 * Calendar day, Monday-start week, or calendar month (not trailing 7- or
+	 * 30-day counts). Only events inside the requested window contribute.
 	 */
 	interval?: ActiveUsersInterval
 	/**
@@ -28,11 +28,13 @@ export interface ActiveUsersQuery {
 	propertyFilters?: Record<string, string>
 	/** Maximum bucket rows returned. Defaults to 100; clamped to 1–500. */
 	limit?: number
+	/** Up to 16 event names to include. Empty includes all names. */
+	eventNames?: string[]
 }
 
 /** Active users for one bucket and breakdown value. */
 export interface AnalyticsActiveUsersBucket {
-	/** The UTC start of the calendar bucket, which may precede start_time. */
+	/** The calendar bucket start as a UTC instant, which may precede start_time. */
 	bucketStart?: string
 	/** The event breakdown value; empty when unsegmented. */
 	breakdownValue?: string
@@ -489,6 +491,7 @@ runtime.registerSchemas({
 	'sylphx.analytics.v1.ActiveUsersQuery': [
 		['breakdownProperty', 'breakdown_property'],
 		['propertyFilters', 'property_filters', undefined, 'map'],
+		['eventNames', 'event_names'],
 	],
 	'sylphx.analytics.v1.AnalyticsActiveUsersBucket': [
 		['bucketStart', 'bucket_start'],
