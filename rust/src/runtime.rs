@@ -804,7 +804,7 @@ impl HttpTransportBuilder {
     }
 
     /// Replaces a protocol surface's default origin, e.g. an Auth instance on
-    /// a custom domain: `.origin("https://api.identity.sylphx.com", "https://auth.example.com")`.
+    /// a custom domain: `.origin("https://api.sylphx.com", "https://auth.example.com")`.
     pub fn origin(mut self, default: impl Into<String>, replacement: impl Into<String>) -> Self {
         self.origins.insert(default.into(), replacement.into());
         self

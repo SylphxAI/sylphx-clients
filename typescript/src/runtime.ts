@@ -70,7 +70,7 @@ export interface ClientOptions {
 	fetch?: FetchLike
 	/**
 	 * Replaces a protocol surface's default origin, e.g.
-	 * `{ 'https://api.identity.sylphx.com': 'https://auth.example.com' }`
+	 * `{ 'https://api.sylphx.com': 'https://auth.example.com' }`
 	 * for an Auth instance on a custom domain.
 	 */
 	origins?: Record<string, string>
