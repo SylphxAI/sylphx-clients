@@ -16,6 +16,16 @@
       "number": 3,
       "proto_name": "ACTIVE_USERS_INTERVAL_MONTH",
       "wire": "month"
+    },
+    {
+      "number": 4,
+      "proto_name": "ACTIVE_USERS_INTERVAL_TRAILING_7_DAYS",
+      "wire": "trailing_7_days"
+    },
+    {
+      "number": 5,
+      "proto_name": "ACTIVE_USERS_INTERVAL_TRAILING_30_DAYS",
+      "wire": "trailing_30_days"
     }
   ]
 }

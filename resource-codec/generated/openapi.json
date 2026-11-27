@@ -5607,16 +5607,18 @@
         "type": "object"
       },
       "sylphx.analytics.v1.ActiveUsersInterval": {
-        "description": "The width of a UTC active-user bucket.",
+        "description": "The active-user window in the reporting time zone.",
         "enum": [
           "day",
           "week",
-          "month"
+          "month",
+          "trailing_7_days",
+          "trailing_30_days"
         ],
         "type": "string"
       },
       "sylphx.analytics.v1.ActiveUsersQuery": {
-        "description": "Exact distinct active subjects in calendar buckets in the reporting time\nzone (UTC by default). Partial buckets count only in-window activity.",
+        "description": "Exact distinct active subjects in the reporting time zone (UTC by default).\nOnly events inside [start_time, end_time) contribute.\nTrailing buckets start at reporting-day midnight and can include quiet\ndays, but omit days with zero active subjects.",
         "properties": {
           "breakdown_property": {
             "description": "Top-level string property per qualifying event. Omit for unsegmented\nbuckets. A dot is literal, not a path. Missing or non-string values\ngroup with the empty string. A subject may contribute to multiple groups.",
@@ -5631,7 +5633,7 @@
           },
           "interval": {
             "$ref": "#/components/schemas/sylphx.analytics.v1.ActiveUsersInterval",
-            "description": "Calendar day, Monday-start week, or calendar month (not trailing 7- or\n30-day counts). Only events inside the requested window contribute."
+            "description": "Calendar `day`, Monday-start `week`, or calendar `month`;\n`trailing_7_days` and `trailing_30_days` count distinct subjects across\nthe 7 or 30 reporting days ending on each day (inclusive)."
           },
           "limit": {
             "description": "Maximum bucket rows returned. Defaults to 100; clamped to 1–500.",
@@ -6231,7 +6233,7 @@
         "properties": {
           "active_users": {
             "$ref": "#/components/schemas/sylphx.analytics.v1.ActiveUsersQuery",
-            "description": "Exact distinct active subjects per day, Monday-start week, or calendar month."
+            "description": "Exact distinct active subjects in calendar or daily trailing windows."
           },
           "end_time": {
             "description": "Exclusive end of the interval; defaults to now.",
@@ -71261,7 +71263,7 @@
                 "properties": {
                   "active_users": {
                     "$ref": "#/components/schemas/sylphx.analytics.v1.ActiveUsersQuery",
-                    "description": "Exact distinct active subjects per day, Monday-start week, or calendar month."
+                    "description": "Exact distinct active subjects in calendar or daily trailing windows."
                   },
                   "end_time": {
                     "description": "Exclusive end of the interval; defaults to now.",

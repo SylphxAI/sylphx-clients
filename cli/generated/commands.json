@@ -4280,7 +4280,7 @@
                 {
                   "field": "active_users",
                   "flag": "--active-users",
-                  "summary": "Exact distinct active subjects per day, Monday-start week, or calendar month.",
+                  "summary": "Exact distinct active subjects in calendar or daily trailing windows.",
                   "type": "json"
                 },
                 {

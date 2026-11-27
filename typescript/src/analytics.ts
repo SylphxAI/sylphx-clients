@@ -6,13 +6,16 @@ import './common.js'
 import type * as common from './common.js'
 
 /**
- * Exact distinct active subjects in calendar buckets in the reporting time
- * zone (UTC by default). Partial buckets count only in-window activity.
+ * Exact distinct active subjects in the reporting time zone (UTC by default).
+ * Only events inside [start_time, end_time) contribute.
+ * Trailing buckets start at reporting-day midnight and can include quiet
+ * days, but omit days with zero active subjects.
  */
 export interface ActiveUsersQuery {
 	/**
-	 * Calendar day, Monday-start week, or calendar month (not trailing 7- or
-	 * 30-day counts). Only events inside the requested window contribute.
+	 * Calendar `day`, Monday-start `week`, or calendar `month`;
+	 * `trailing_7_days` and `trailing_30_days` count distinct subjects across
+	 * the 7 or 30 reporting days ending on each day (inclusive).
 	 */
 	interval?: ActiveUsersInterval
 	/**
@@ -389,7 +392,7 @@ export interface QueryAnalyticsEventsRequest {
 	funnel?: FunnelQuery
 	/** Calendar cohorts and exact or unbounded subject retention by period. */
 	retention?: RetentionQuery
-	/** Exact distinct active subjects per day, Monday-start week, or calendar month. */
+	/** Exact distinct active subjects in calendar or daily trailing windows. */
 	activeUsers?: ActiveUsersQuery
 	/** Session count and exact median duration by session start day. */
 	sessions?: SessionsQuery
@@ -515,8 +518,8 @@ export interface SessionsQuery {
 	limit?: number
 }
 
-/** The width of a UTC active-user bucket. */
-export type ActiveUsersInterval = 'day' | 'week' | 'month' | (string & {})
+/** The active-user window in the reporting time zone. */
+export type ActiveUsersInterval = 'day' | 'week' | 'month' | 'trailing_7_days' | 'trailing_30_days' | (string & {})
 
 /** The app's analytics consent, as sent with a batch. */
 export type AnalyticsConsent = 'granted' | 'denied' | (string & {})

@@ -673,27 +673,39 @@
       ]
     },
     {
-      "doc": "The width of a UTC active-user bucket.",
+      "doc": "The active-user window in the reporting time zone.",
       "name": "sylphx.analytics.v1.ActiveUsersInterval",
       "package": "sylphx.analytics.v1",
       "values": [
         {
-          "doc": "One UTC calendar day.",
+          "doc": "One calendar day.",
           "number": 1,
           "proto_name": "ACTIVE_USERS_INTERVAL_DAY",
           "wire": "day"
         },
         {
-          "doc": "One UTC ISO week starting Monday at 00:00:00Z.",
+          "doc": "One ISO week starting Monday at local midnight.",
           "number": 2,
           "proto_name": "ACTIVE_USERS_INTERVAL_WEEK",
           "wire": "week"
         },
         {
-          "doc": "One UTC calendar month, starting on the first at 00:00:00Z.",
+          "doc": "One calendar month starting on the first at local midnight.",
           "number": 3,
           "proto_name": "ACTIVE_USERS_INTERVAL_MONTH",
           "wire": "month"
+        },
+        {
+          "doc": "One bucket per reporting day, counting that day and the preceding 6 days,\nclipped to the requested time range.",
+          "number": 4,
+          "proto_name": "ACTIVE_USERS_INTERVAL_TRAILING_7_DAYS",
+          "wire": "trailing_7_days"
+        },
+        {
+          "doc": "One bucket per reporting day, counting that day and the preceding 29 days,\nclipped to the requested time range.",
+          "number": 5,
+          "proto_name": "ACTIVE_USERS_INTERVAL_TRAILING_30_DAYS",
+          "wire": "trailing_30_days"
         }
       ]
     },
@@ -22192,14 +22204,14 @@
       "package": "sylphx.ai.v1"
     },
     {
-      "doc": "Exact distinct active subjects in calendar buckets in the reporting time\nzone (UTC by default). Partial buckets count only in-window activity.",
+      "doc": "Exact distinct active subjects in the reporting time zone (UTC by default).\nOnly events inside [start_time, end_time) contribute.\nTrailing buckets start at reporting-day midnight and can include quiet\ndays, but omit days with zero active subjects.",
       "fields": [
         {
           "behaviors": [
             "REQUIRED"
           ],
           "cli_flag": "",
-          "doc": "Calendar day, Monday-start week, or calendar month (not trailing 7- or\n30-day counts). Only events inside the requested window contribute.",
+          "doc": "Calendar `day`, Monday-start `week`, or calendar `month`;\n`trailing_7_days` and `trailing_30_days` count distinct subjects across\nthe 7 or 30 reporting days ending on each day (inclusive).",
           "filterable": false,
           "name": "interval",
           "number": 1,
@@ -24123,7 +24135,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "Exact distinct active subjects per day, Monday-start week, or calendar month.",
+          "doc": "Exact distinct active subjects in calendar or daily trailing windows.",
           "filterable": false,
           "name": "active_users",
           "number": 7,

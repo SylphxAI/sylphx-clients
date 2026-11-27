@@ -6858,7 +6858,7 @@
         "properties": {
           "active_users": {
             "additionalProperties": false,
-            "description": "Exact distinct active subjects per day, Monday-start week, or calendar month.",
+            "description": "Exact distinct active subjects in calendar or daily trailing windows.",
             "properties": {
               "breakdown_property": {
                 "description": "Top-level string property per qualifying event. Omit for unsegmented\nbuckets. A dot is literal, not a path. Missing or non-string values\ngroup with the empty string. A subject may contribute to multiple groups.",
@@ -6872,11 +6872,13 @@
                 "type": "array"
               },
               "interval": {
-                "description": "Calendar day, Monday-start week, or calendar month (not trailing 7- or\n30-day counts). Only events inside the requested window contribute.",
+                "description": "Calendar `day`, Monday-start `week`, or calendar `month`;\n`trailing_7_days` and `trailing_30_days` count distinct subjects across\nthe 7 or 30 reporting days ending on each day (inclusive).",
                 "enum": [
                   "day",
                   "week",
-                  "month"
+                  "month",
+                  "trailing_7_days",
+                  "trailing_30_days"
                 ],
                 "type": "string"
               },
@@ -53941,7 +53943,7 @@
         "properties": {
           "active_users": {
             "additionalProperties": false,
-            "description": "Exact distinct active subjects per day, Monday-start week, or calendar month.",
+            "description": "Exact distinct active subjects in calendar or daily trailing windows.",
             "properties": {
               "breakdown_property": {
                 "description": "Top-level string property per qualifying event. Omit for unsegmented\nbuckets. A dot is literal, not a path. Missing or non-string values\ngroup with the empty string. A subject may contribute to multiple groups.",
@@ -53955,11 +53957,13 @@
                 "type": "array"
               },
               "interval": {
-                "description": "Calendar day, Monday-start week, or calendar month (not trailing 7- or\n30-day counts). Only events inside the requested window contribute.",
+                "description": "Calendar `day`, Monday-start `week`, or calendar `month`;\n`trailing_7_days` and `trailing_30_days` count distinct subjects across\nthe 7 or 30 reporting days ending on each day (inclusive).",
                 "enum": [
                   "day",
                   "week",
-                  "month"
+                  "month",
+                  "trailing_7_days",
+                  "trailing_30_days"
                 ],
                 "type": "string"
               },

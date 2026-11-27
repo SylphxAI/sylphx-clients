@@ -3,13 +3,16 @@
 
 #![allow(clippy::all)]
 
-/// Exact distinct active subjects in calendar buckets in the reporting time
-/// zone (UTC by default). Partial buckets count only in-window activity.
+/// Exact distinct active subjects in the reporting time zone (UTC by default).
+/// Only events inside [start_time, end_time) contribute.
+/// Trailing buckets start at reporting-day midnight and can include quiet
+/// days, but omit days with zero active subjects.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct ActiveUsersQuery {
-    /// Calendar day, Monday-start week, or calendar month (not trailing 7- or
-    /// 30-day counts). Only events inside the requested window contribute.
+    /// Calendar `day`, Monday-start `week`, or calendar `month`;
+    /// `trailing_7_days` and `trailing_30_days` count distinct subjects across
+    /// the 7 or 30 reporting days ending on each day (inclusive).
     ///
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -758,7 +761,7 @@ pub struct QueryAnalyticsEventsRequest {
     /// Calendar cohorts and exact or unbounded subject retention by period.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub retention: Option<RetentionQuery>,
-    /// Exact distinct active subjects per day, Monday-start week, or calendar month.
+    /// Exact distinct active subjects in calendar or daily trailing windows.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
@@ -955,16 +958,22 @@ pub struct SessionsQuery {
     pub limit: Option<i32>,
 }
 
-/// The width of a UTC active-user bucket.
+/// The active-user window in the reporting time zone.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum ActiveUsersInterval {
-    /// One UTC calendar day.
+    /// One calendar day.
     Day,
-    /// One UTC ISO week starting Monday at 00:00:00Z.
+    /// One ISO week starting Monday at local midnight.
     Week,
-    /// One UTC calendar month, starting on the first at 00:00:00Z.
+    /// One calendar month starting on the first at local midnight.
     Month,
+    /// One bucket per reporting day, counting that day and the preceding 6 days,
+    /// clipped to the requested time range.
+    Trailing7Days,
+    /// One bucket per reporting day, counting that day and the preceding 29 days,
+    /// clipped to the requested time range.
+    Trailing30Days,
     /// A value this SDK version does not know.
     Unknown(String),
 }
@@ -976,6 +985,8 @@ impl ActiveUsersInterval {
             Self::Day => "day",
             Self::Week => "week",
             Self::Month => "month",
+            Self::Trailing7Days => "trailing_7_days",
+            Self::Trailing30Days => "trailing_30_days",
             Self::Unknown(s) => s.as_str(),
         }
     }
@@ -986,6 +997,8 @@ impl ActiveUsersInterval {
             "day" => Self::Day,
             "week" => Self::Week,
             "month" => Self::Month,
+            "trailing_7_days" => Self::Trailing7Days,
+            "trailing_30_days" => Self::Trailing30Days,
             other => Self::Unknown(other.to_string()),
         }
     }
