@@ -5815,7 +5815,7 @@
             "type": "string"
           },
           "retained_subjects": {
-            "description": "Distinct subjects who fired the return event in each period, after or at\ntheir own cohort-entry time and before the query's exclusive end. Index 0\nis the entry period; the array length is periods + 1.",
+            "description": "Distinct subjects retained in each period according to the selected mode.\nReturns must be at or after cohort entry and before the exclusive end. Index 0\nis the entry period; the array length is periods + 1.",
             "items": {
               "format": "int64",
               "type": "string"
@@ -6237,7 +6237,7 @@
           },
           "retention": {
             "$ref": "#/components/schemas/sylphx.analytics.v1.RetentionQuery",
-            "description": "Calendar cohorts and exact subject retention by period."
+            "description": "Calendar cohorts and exact or unbounded subject retention by period."
           },
           "rollup": {
             "$ref": "#/components/schemas/sylphx.analytics.v1.RollupQuery",
@@ -6319,8 +6319,16 @@
         ],
         "type": "string"
       },
+      "sylphx.analytics.v1.RetentionMode": {
+        "description": "How return events contribute to each reported retention period.",
+        "enum": [
+          "exact",
+          "unbounded"
+        ],
+        "type": "string"
+      },
       "sylphx.analytics.v1.RetentionQuery": {
-        "description": "Exact subject retention by UTC calendar period. A subject enters at their\nfirst qualifying cohort event in the query interval.",
+        "description": "Subject retention by reporting calendar period. A subject enters at their\nfirst qualifying cohort event in the query interval.",
         "properties": {
           "breakdown_property": {
             "description": "A top-level key matching ^[A-Za-z_][A-Za-z0-9_.]{0,63}$. Its string value\ncomes from the first qualifying cohort event, never from a return event.\nOmit for unsegmented cohorts. Missing and non-string values are grouped\nwith the empty string. A dot in a key is literal, not a path.",
@@ -6332,12 +6340,16 @@
           },
           "interval": {
             "$ref": "#/components/schemas/sylphx.analytics.v1.RetentionInterval",
-            "description": "The UTC calendar unit for both cohort entry and return periods."
+            "description": "The reporting calendar unit for both cohort entry and return periods."
           },
           "limit": {
             "description": "Maximum cohort rows returned. Defaults to 100; clamped to 1–500.",
             "format": "int32",
             "type": "integer"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/sylphx.analytics.v1.RetentionMode",
+            "description": "Defaults to exact. Unbounded counts returns in the selected period or\nany later period before end_time, even beyond the requested periods."
           },
           "periods": {
             "description": "Number of periods after period 0. Defaults to 7; clamped to 1–30.",
@@ -71176,7 +71188,7 @@
                   },
                   "retention": {
                     "$ref": "#/components/schemas/sylphx.analytics.v1.RetentionQuery",
-                    "description": "Calendar cohorts and exact subject retention by period."
+                    "description": "Calendar cohorts and exact or unbounded subject retention by period."
                   },
                   "rollup": {
                     "$ref": "#/components/schemas/sylphx.analytics.v1.RollupQuery",

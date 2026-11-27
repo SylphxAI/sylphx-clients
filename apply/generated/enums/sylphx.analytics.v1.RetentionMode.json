@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.analytics.v1.RetentionMode",
+  "package": "sylphx.analytics.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "RETENTION_MODE_EXACT",
+      "wire": "exact"
+    },
+    {
+      "number": 2,
+      "proto_name": "RETENTION_MODE_UNBOUNDED",
+      "wire": "unbounded"
+    }
+  ]
+}

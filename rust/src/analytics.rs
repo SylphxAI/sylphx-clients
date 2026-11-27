@@ -276,8 +276,8 @@ pub struct AnalyticsRetentionCohort {
         alias = "cohortSize"
     )]
     pub cohort_size: i64,
-    /// Distinct subjects who fired the return event in each period, after or at
-    /// their own cohort-entry time and before the query's exclusive end. Index 0
+    /// Distinct subjects retained in each period according to the selected mode.
+    /// Returns must be at or after cohort entry and before the exclusive end. Index 0
     /// is the entry period; the array length is periods + 1.
     #[serde(
         default,
@@ -752,7 +752,7 @@ pub struct QueryAnalyticsEventsRequest {
     /// Ordered conversion steps.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub funnel: Option<FunnelQuery>,
-    /// Calendar cohorts and exact subject retention by period.
+    /// Calendar cohorts and exact or unbounded subject retention by period.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub retention: Option<RetentionQuery>,
     /// Exact distinct active subjects per day, Monday-start week, or calendar month.
@@ -822,7 +822,7 @@ pub struct QueryAnalyticsEventsResponse {
     pub paths: Vec<AnalyticsPath>,
 }
 
-/// Exact subject retention by UTC calendar period. A subject enters at their
+/// Subject retention by reporting calendar period. A subject enters at their
 /// first qualifying cohort event in the query interval.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -843,7 +843,7 @@ pub struct RetentionQuery {
         alias = "returnEvent"
     )]
     pub return_event: Option<String>,
-    /// The UTC calendar unit for both cohort entry and return periods.
+    /// The reporting calendar unit for both cohort entry and return periods.
     ///
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -872,6 +872,10 @@ pub struct RetentionQuery {
     /// Maximum cohort rows returned. Defaults to 100; clamped to 1–500.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub limit: Option<i32>,
+    /// Defaults to exact. Unbounded counts returns in the selected period or
+    /// any later period before end_time, even beyond the requested periods.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mode: Option<RetentionMode>,
 }
 
 /// A time-bucketed aggregate over deduplicated events.
@@ -1206,6 +1210,57 @@ impl<'de> serde::Deserialize<'de> for RetentionInterval {
 }
 
 impl crate::runtime::QueryValue for RetentionInterval {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// How return events contribute to each reported retention period.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum RetentionMode {
+    /// A causal return in exactly the reported period.
+    Exact,
+    /// A causal return in the reported period or any later period in the interval.
+    Unbounded,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl RetentionMode {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Exact => "exact",
+            Self::Unbounded => "unbounded",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "exact" => Self::Exact,
+            "unbounded" => Self::Unbounded,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for RetentionMode {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for RetentionMode {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for RetentionMode {
     fn query_value(&self) -> Option<String> {
         Some(self.as_str().to_string())
     }

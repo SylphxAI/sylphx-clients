@@ -4262,7 +4262,7 @@
                 {
                   "field": "retention",
                   "flag": "--retention",
-                  "summary": "Calendar cohorts and exact subject retention by period.",
+                  "summary": "Calendar cohorts and exact or unbounded subject retention by period.",
                   "type": "json"
                 },
                 {

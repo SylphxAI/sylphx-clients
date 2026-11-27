@@ -6980,7 +6980,7 @@
           },
           "retention": {
             "additionalProperties": false,
-            "description": "Calendar cohorts and exact subject retention by period.",
+            "description": "Calendar cohorts and exact or unbounded subject retention by period.",
             "properties": {
               "breakdown_property": {
                 "description": "A top-level key matching ^[A-Za-z_][A-Za-z0-9_.]{0,63}$. Its string value\ncomes from the first qualifying cohort event, never from a return event.\nOmit for unsegmented cohorts. Missing and non-string values are grouped\nwith the empty string. A dot in a key is literal, not a path.",
@@ -6991,7 +6991,7 @@
                 "type": "string"
               },
               "interval": {
-                "description": "The UTC calendar unit for both cohort entry and return periods.",
+                "description": "The reporting calendar unit for both cohort entry and return periods.",
                 "enum": [
                   "day",
                   "week"
@@ -7002,6 +7002,14 @@
                 "description": "Maximum cohort rows returned. Defaults to 100; clamped to 1–500.",
                 "format": "int32",
                 "type": "integer"
+              },
+              "mode": {
+                "description": "Defaults to exact. Unbounded counts returns in the selected period or\nany later period before end_time, even beyond the requested periods.",
+                "enum": [
+                  "exact",
+                  "unbounded"
+                ],
+                "type": "string"
               },
               "periods": {
                 "description": "Number of periods after period 0. Defaults to 7; clamped to 1–30.",
@@ -54029,7 +54037,7 @@
           },
           "retention": {
             "additionalProperties": false,
-            "description": "Calendar cohorts and exact subject retention by period.",
+            "description": "Calendar cohorts and exact or unbounded subject retention by period.",
             "properties": {
               "breakdown_property": {
                 "description": "A top-level key matching ^[A-Za-z_][A-Za-z0-9_.]{0,63}$. Its string value\ncomes from the first qualifying cohort event, never from a return event.\nOmit for unsegmented cohorts. Missing and non-string values are grouped\nwith the empty string. A dot in a key is literal, not a path.",
@@ -54040,7 +54048,7 @@
                 "type": "string"
               },
               "interval": {
-                "description": "The UTC calendar unit for both cohort entry and return periods.",
+                "description": "The reporting calendar unit for both cohort entry and return periods.",
                 "enum": [
                   "day",
                   "week"
@@ -54051,6 +54059,14 @@
                 "description": "Maximum cohort rows returned. Defaults to 100; clamped to 1–500.",
                 "format": "int32",
                 "type": "integer"
+              },
+              "mode": {
+                "description": "Defaults to exact. Unbounded counts returns in the selected period or\nany later period before end_time, even beyond the requested periods.",
+                "enum": [
+                  "exact",
+                  "unbounded"
+                ],
+                "type": "string"
               },
               "periods": {
                 "description": "Number of periods after period 0. Defaults to 7; clamped to 1–30.",

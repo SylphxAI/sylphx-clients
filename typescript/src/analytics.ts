@@ -137,8 +137,8 @@ export interface AnalyticsRetentionCohort {
 	/** Distinct subjects entering the cohort. */
 	cohortSize?: string
 	/**
-	 * Distinct subjects who fired the return event in each period, after or at
-	 * their own cohort-entry time and before the query's exclusive end. Index 0
+	 * Distinct subjects retained in each period according to the selected mode.
+	 * Returns must be at or after cohort entry and before the exclusive end. Index 0
 	 * is the entry period; the array length is periods + 1.
 	 */
 	retainedSubjects?: string[]
@@ -385,7 +385,7 @@ export interface QueryAnalyticsEventsRequest {
 	rollup?: RollupQuery
 	/** Ordered conversion steps. */
 	funnel?: FunnelQuery
-	/** Calendar cohorts and exact subject retention by period. */
+	/** Calendar cohorts and exact or unbounded subject retention by period. */
 	retention?: RetentionQuery
 	/** Exact distinct active subjects per day, Monday-start week, or calendar month. */
 	activeUsers?: ActiveUsersQuery
@@ -429,7 +429,7 @@ export interface QueryAnalyticsEventsResponse {
 }
 
 /**
- * Exact subject retention by UTC calendar period. A subject enters at their
+ * Subject retention by reporting calendar period. A subject enters at their
  * first qualifying cohort event in the query interval.
  */
 export interface RetentionQuery {
@@ -437,7 +437,7 @@ export interface RetentionQuery {
 	cohortEvent?: string
 	/** The event that counts as a return. Defaults to cohort_event when omitted. */
 	returnEvent?: string
-	/** The UTC calendar unit for both cohort entry and return periods. */
+	/** The reporting calendar unit for both cohort entry and return periods. */
 	interval?: RetentionInterval
 	/** Number of periods after period 0. Defaults to 7; clamped to 1–30. */
 	periods?: number
@@ -455,6 +455,11 @@ export interface RetentionQuery {
 	propertyFilters?: Record<string, string>
 	/** Maximum cohort rows returned. Defaults to 100; clamped to 1–500. */
 	limit?: number
+	/**
+	 * Defaults to exact. Unbounded counts returns in the selected period or
+	 * any later period before end_time, even beyond the requested periods.
+	 */
+	mode?: RetentionMode
 }
 
 /** A time-bucketed aggregate over deduplicated events. */
@@ -522,6 +527,9 @@ export type EventStatus = 'accepted' | 'duplicate' | 'rejected' | (string & {})
 
 /** The width of a UTC retention period. */
 export type RetentionInterval = 'day' | 'week' | (string & {})
+
+/** How return events contribute to each reported retention period. */
+export type RetentionMode = 'exact' | 'unbounded' | (string & {})
 
 /** The width of a UTC rollup bucket. */
 export type RollupInterval = 'hour' | 'day' | (string & {})

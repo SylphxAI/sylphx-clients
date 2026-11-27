@@ -780,6 +780,25 @@
       ]
     },
     {
+      "doc": "How return events contribute to each reported retention period.",
+      "name": "sylphx.analytics.v1.RetentionMode",
+      "package": "sylphx.analytics.v1",
+      "values": [
+        {
+          "doc": "A causal return in exactly the reported period.",
+          "number": 1,
+          "proto_name": "RETENTION_MODE_EXACT",
+          "wire": "exact"
+        },
+        {
+          "doc": "A causal return in the reported period or any later period in the interval.",
+          "number": 2,
+          "proto_name": "RETENTION_MODE_UNBOUNDED",
+          "wire": "unbounded"
+        }
+      ]
+    },
+    {
       "doc": "The width of a UTC rollup bucket.",
       "name": "sylphx.analytics.v1.RollupInterval",
       "package": "sylphx.analytics.v1",
@@ -22736,7 +22755,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "Distinct subjects who fired the return event in each period, after or at\ntheir own cohort-entry time and before the query's exclusive end. Index 0\nis the entry period; the array length is periods + 1.",
+          "doc": "Distinct subjects retained in each period according to the selected mode.\nReturns must be at or after cohort entry and before the exclusive end. Index 0\nis the entry period; the array length is periods + 1.",
           "filterable": false,
           "name": "retained_subjects",
           "number": 4,
@@ -24008,7 +24027,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "Calendar cohorts and exact subject retention by period.",
+          "doc": "Calendar cohorts and exact or unbounded subject retention by period.",
           "filterable": false,
           "name": "retention",
           "number": 6,
@@ -24212,7 +24231,7 @@
       "package": "sylphx.analytics.v1"
     },
     {
-      "doc": "Exact subject retention by UTC calendar period. A subject enters at their\nfirst qualifying cohort event in the query interval.",
+      "doc": "Subject retention by reporting calendar period. A subject enters at their\nfirst qualifying cohort event in the query interval.",
       "fields": [
         {
           "behaviors": [
@@ -24257,7 +24276,7 @@
             "REQUIRED"
           ],
           "cli_flag": "",
-          "doc": "The UTC calendar unit for both cohort entry and return periods.",
+          "doc": "The reporting calendar unit for both cohort entry and return periods.",
           "filterable": false,
           "name": "interval",
           "number": 3,
@@ -24348,6 +24367,25 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Defaults to exact. Unbounded counts returns in the selected period or\nany later period before end_time, even beyond the requested periods.",
+          "filterable": false,
+          "name": "mode",
+          "number": 8,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "enum",
+            "name": "sylphx.analytics.v1.RetentionMode"
           }
         }
       ],
