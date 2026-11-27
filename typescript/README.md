@@ -156,7 +156,12 @@ The Events endpoint preserves existing attribution fields on sparse upserts.
 Denied requests send checkout identity and the denied consent flags only, so
 settled purchase delivery is suppressed; this is not a backend erasure API.
 Google click IDs map to their typed fields and a consented Meta click can supply
-`fbc`. Set `gaMeasurementId` to normalize the matching GA4 session cookie into
+`fbc`. Each click ID carries `firstSeenAt` (Unix milliseconds) from the URL that
+first showed it, sent as `<id>_first_seen_at`. A click ID without one, or first
+seen more than `clickIdMaxAgeMs` ago (default 90 days, on `createSignalBrowser`
+or `bindCheckoutAttribution`), is dropped on read and never sent. When you pass
+`attribution` yourself, include the original observation time. Server callers'
+`headers` also supply the buyer's `User-Agent`. Set `gaMeasurementId` to normalize the matching GA4 session cookie into
 `ga_session_id`; unrelated or unrecognized cookies are ignored. UTMs are allowlisted and appended only to an optional public
 `pageLocation`; the endpoint has no standalone UTM fields. The SDK strips the
 input's query and fragment but cannot know if a path contains personal data:

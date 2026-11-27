@@ -23,11 +23,17 @@ export type AttributionBindingRequest = (
 	ga_client_id?: string
 	ga_session_id?: string
 	gclid?: string
+	/** Unix milliseconds when the click ID was first observed; the server drops stale IDs. */
+	gclid_first_seen_at?: number
 	gbraid?: string
+	gbraid_first_seen_at?: number
 	wbraid?: string
+	wbraid_first_seen_at?: number
 	fbc?: string
 	fbp?: string
 	page_location?: string
+	/** The buyer's browser User-Agent. A secret-key binding never falls back to the request header. */
+	user_agent?: string
 }
 
 export interface AttributionBinding {
@@ -46,13 +52,16 @@ export interface BindCheckoutOptions {
 	signal?: AbortSignal
 	/** On the server, pass the user's persisted choice and trusted region signal. */
 	privacy?: SignalPrivacy
-	/** On the server, pass the original browser request headers (Cookie and Sec-GPC). */
+	/** On the server, pass the original browser request headers (Cookie, Sec-GPC and User-Agent). */
 	headers?: Headers
 	/** Browser cookie source. Never read when policy denies collection. */
 	readCookies?: () => string
 	/** Exact GA4 property whose _ga_* cookie may supply ga_session_id. */
 	gaMeasurementId?: string
+	/** Click IDs need `firstSeenAt`; IDs without one or older than `clickIdMaxAgeMs` are not sent. */
 	attribution?: SignalAttribution
+	/** Click ID age ceiling in milliseconds. Default: 90 days, which the server also enforces. */
+	clickIdMaxAgeMs?: number
 	/** A known public landing page. Only its origin, path and captured UTMs are sent. */
 	pageLocation?: URL
 }
@@ -109,13 +118,16 @@ export async function bindCheckoutAttribution(
 			options.readCookies?.() ??
 			(typeof document !== 'undefined' ? document.cookie : '')
 		const cookies = parseAttributionCookies(cookieHeader, options.gaMeasurementId, { analytics, ads })
-		const touch = cleanAttribution(options.attribution, ads)
+		const touch = cleanAttribution(options.attribution, ads, options.clickIdMaxAgeMs)
 		if (analytics) {
 			payload.ga_client_id = cookies.gaClientId
 			payload.ga_session_id = cookies.gaSessionId
 			payload.page_location = signalPageLocation(options.pageLocation, touch)
 		}
-		if (ads) Object.assign(payload, signalAdFields(touch, cookies))
+		if (ads) {
+			Object.assign(payload, signalAdFields(touch, cookies))
+			payload.user_agent = cleanValue(options.headers?.get('User-Agent'), 512, true)
+		}
 	}
 
 	const response = await (options.fetch ?? fetch)(endpoint, {

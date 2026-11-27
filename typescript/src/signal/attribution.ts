@@ -15,9 +15,13 @@ const utmFields = [
 type ClickField = (typeof clickFields)[number]
 type UtmField = (typeof utmFields)[number]
 export type SignalAttribution = Partial<Record<ClickField | UtmField, string>> & {
-	/** Unix milliseconds when fbclid was first observed (for deriving fbc). */
-	capturedAt?: number
+	/** Unix milliseconds when each click ID was first observed in a landing URL. */
+	firstSeenAt?: Partial<Record<ClickField, number>>
 }
+
+/** Default click ID age ceiling, matching the binding API's server ceiling. */
+export const signalClickIdMaxAgeMs = 90 * 24 * 60 * 60 * 1000
+const clockSkewMs = 5 * 60 * 1000
 
 export function cleanValue(value: unknown, maxBytes: number, spaces = false): string | undefined {
 	if (
@@ -35,29 +39,55 @@ function clickId(value: unknown): string | undefined {
 	return typeof value === 'string' && /^[A-Za-z0-9_.~-]{1,256}$/.test(value) ? value : undefined
 }
 
-export function cleanAttribution(value: unknown, includeAds = true): SignalAttribution {
+/** Click IDs need a real, unexpired first-seen time; a missing one is never assumed. */
+export function cleanAttribution(
+	value: unknown,
+	includeAds = true,
+	maxAgeMs = signalClickIdMaxAgeMs,
+	now = Date.now(),
+): SignalAttribution {
 	const result: SignalAttribution = {}
 	if (!value || typeof value !== 'object') return result
 	const raw = value as Record<string, unknown>
-	if (includeAds) {
-		for (const field of clickFields) {
-			const clean = clickId(raw[field])
-			if (clean) result[field] = clean
+	const seen: Record<string, unknown> =
+		raw.firstSeenAt && typeof raw.firstSeenAt === 'object' ? { ...raw.firstSeenAt } : {}
+	const firstSeenAt: Partial<Record<ClickField, number>> = {}
+	for (const field of includeAds ? clickFields : []) {
+		const clean = clickId(raw[field])
+		const at = seen[field]
+		if (
+			clean &&
+			typeof at === 'number' &&
+			Number.isSafeInteger(at) &&
+			at > 0 &&
+			at <= now + clockSkewMs &&
+			now - at <= maxAgeMs
+		) {
+			result[field] = clean
+			firstSeenAt[field] = at
 		}
 	}
 	for (const field of utmFields) {
 		const clean = cleanValue(raw[field], 256, true)
 		if (clean) result[field] = clean
 	}
-	if (
-		result.fbclid &&
-		typeof raw.capturedAt === 'number' &&
-		Number.isSafeInteger(raw.capturedAt) &&
-		raw.capturedAt > 0
-	) {
-		result.capturedAt = raw.capturedAt
-	}
+	if (Object.keys(firstSeenAt).length) result.firstSeenAt = firstSeenAt
 	return result
+}
+
+/** Overlay `next` on `base`, keeping the earliest observation of an unchanged click ID. */
+export function mergeSignalAttribution(
+	base: SignalAttribution | undefined,
+	next: SignalAttribution,
+	replace = false,
+): SignalAttribution {
+	const kept = replace ? undefined : base
+	const firstSeenAt = { ...kept?.firstSeenAt, ...next.firstSeenAt }
+	for (const field of clickFields) {
+		const seen = base?.firstSeenAt?.[field]
+		if (seen && next[field] && next[field] === base?.[field]) firstSeenAt[field] = seen
+	}
+	return { ...kept, ...next, firstSeenAt }
 }
 
 /** Remove known ad IDs from an analytics-only page view URL. */
@@ -65,18 +95,24 @@ export function stripSignalClickIds(url: URL) {
 	for (const field of clickFields) if (url.searchParams.has(field)) url.searchParams.delete(field)
 }
 
-/** Read known campaign parameters only. Call after checking the applicable privacy policy. */
+/**
+ * Read known campaign parameters only. Call after checking the applicable privacy policy.
+ * `observedAt` stamps only the click IDs present in this URL; pass the landing time when replaying one.
+ */
 export function parseSignalAttribution(
 	url: URL,
-	capturedAt = Date.now(),
+	observedAt = Date.now(),
 	includeAds = true,
 ): SignalAttribution {
-	const entries: Record<string, unknown> = { capturedAt }
+	// cleanAttribution keeps a time only beside a click ID present in this URL.
+	const entries: Record<string, unknown> = {
+		firstSeenAt: Object.fromEntries(clickFields.map((field) => [field, observedAt])),
+	}
 	for (const field of includeAds ? [...clickFields, ...utmFields] : utmFields) {
 		const values = url.searchParams.getAll(field)
 		if (values.length === 1) entries[field] = values[0]
 	}
-	return cleanAttribution(entries, includeAds)
+	return cleanAttribution(entries, includeAds, signalClickIdMaxAgeMs, observedAt)
 }
 
 export interface AttributionCookies {
@@ -144,13 +180,18 @@ export function parseAttributionCookies(
 	return result
 }
 
+/** Expects a cleaned touch: every click ID has its observed first-seen time. */
 export function signalAdFields(touch: SignalAttribution, cookies: AttributionCookies) {
+	const seen = touch.firstSeenAt ?? {}
 	const derivedFbc =
-		touch.fbclid && touch.capturedAt && cleanValue(`fb.1.${touch.capturedAt}.${touch.fbclid}`, 256)
+		touch.fbclid && seen.fbclid && cleanValue(`fb.1.${seen.fbclid}.${touch.fbclid}`, 256)
 	return {
 		gclid: touch.gclid,
+		gclid_first_seen_at: seen.gclid,
 		gbraid: touch.gbraid,
+		gbraid_first_seen_at: seen.gbraid,
 		wbraid: touch.wbraid,
+		wbraid_first_seen_at: seen.wbraid,
 		fbc:
 			touch.fbclid && cookies.fbc?.split('.').slice(3).join('.') === touch.fbclid
 				? cookies.fbc

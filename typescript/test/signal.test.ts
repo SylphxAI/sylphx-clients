@@ -142,9 +142,41 @@ test('captures bounded known click and UTM fields only', () => {
 	)
 	expect(parseSignalAttribution(url, 1700000000000)).toEqual({
 		fbclid: 'Some-Click',
-		capturedAt: 1700000000000,
+		firstSeenAt: { fbclid: 1700000000000 },
 		utm_campaign: 'Summer Launch',
 	})
+})
+
+test('click IDs need an observed, unexpired first-seen time before binding', async () => {
+	const day = 24 * 60 * 60 * 1000
+	const now = Date.parse('2026-11-27T00:00:00Z')
+	const clock = jest.spyOn(Date, 'now').mockReturnValue(now)
+	try {
+		const { options, requests } = transport()
+		const bind = (attribution: SignalAttribution, clickIdMaxAgeMs?: number) =>
+			bindCheckoutAttribution(ids, {
+				...options,
+				privacy: { region: 'US' },
+				headers: new Headers(),
+				attribution,
+				clickIdMaxAgeMs,
+			})
+		// A caller without timestamps keeps its binding, but no click ID or fbc is invented.
+		await bind({ gclid: 'NoTime', fbclid: 'NoTime', capturedAt: now } as SignalAttribution)
+		const firstSeenAt = { gclid: now - 91 * day, gbraid: now + day, wbraid: now - day }
+		const clickIds = { gclid: 'G', gbraid: 'B', wbraid: 'WebBraid', fbclid: 'F' }
+		await bind({ ...clickIds, firstSeenAt: { ...firstSeenAt, fbclid: now - 91 * day } })
+		await bind({ wbraid: 'WebBraid', firstSeenAt }, 60 * 60 * 1000)
+		const bodies = await Promise.all(requests.map((request) => request.json()))
+		const base = { checkout_session_id: 'checkout_123', consent: granted }
+		expect(bodies).toEqual([
+			base,
+			{ ...base, wbraid: 'WebBraid', wbraid_first_seen_at: now - day },
+			base,
+		])
+	} finally {
+		clock.mockRestore()
+	}
 })
 
 for (const region of ['US', 'CA', 'AU']) {
@@ -203,19 +235,20 @@ for (const [region, storedChoice, gpc] of [
 
 test('posts the exact canonical binding payload and transport after opt-in', async () => {
 	const { options, requests, inits } = transport()
+	const seen = Date.now() - 60_000
 	const result = await bindCheckoutAttribution(
 		{ ...ids, processorSessionId: 'processor_1', subscriptionId: 'subscription_1' },
 		{
 			...options,
 			privacy: { region: 'UK', storedChoice: 'granted' },
 			gaMeasurementId: 'G-TEST123',
-			headers: new Headers({ cookie: [cookie, gaCookie].join('; ') }),
+			headers: new Headers({ cookie: [cookie, gaCookie].join('; '), 'User-Agent': 'Buyer/1.0' }),
 			attribution: {
 				gclid: 'GoogleClick',
 				gbraid: 'Braid',
 				wbraid: 'WebBraid',
 				fbclid: 'New.Click',
-				capturedAt: 1700000000001,
+				firstSeenAt: { gclid: seen - 2, gbraid: seen - 1, wbraid: seen, fbclid: seen + 1 },
 				utm_campaign: 'Summer Launch',
 			},
 			pageLocation: new URL('https://example.com/landing?auth_code=secret&gclid=private#private'),
@@ -241,11 +274,15 @@ test('posts the exact canonical binding payload and transport after opt-in', asy
 		ga_client_id: '12345.67890',
 		ga_session_id: '1700000000',
 		gclid: 'GoogleClick',
+		gclid_first_seen_at: seen - 2,
 		gbraid: 'Braid',
+		gbraid_first_seen_at: seen - 1,
 		wbraid: 'WebBraid',
-		fbc: 'fb.1.1700000000001.New.Click',
+		wbraid_first_seen_at: seen,
+		fbc: `fb.1.${seen + 1}.New.Click`,
 		fbp: 'fb.1.1700000000000.56789',
 		page_location: 'https://example.com/landing?utm_campaign=Summer+Launch',
+		user_agent: 'Buyer/1.0',
 	})
 })
 
@@ -257,13 +294,13 @@ test('analytics-only checkout sends GA4 and a sanitized page URL, never ads', as
 		...options,
 		privacy: { region: 'EU', storedChoice },
 		gaMeasurementId: 'G-TEST123',
-		headers: new Headers({ cookie: [cookie, gaCookie].join('; ') }),
+		headers: new Headers({ cookie: [cookie, gaCookie].join('; '), 'User-Agent': 'Buyer/1.0' }),
 		attribution: {
 			gclid: 'GoogleClick',
 			gbraid: 'Braid',
 			wbraid: 'WebBraid',
 			fbclid: 'New.Click',
-			capturedAt: 1700000000001,
+			firstSeenAt: { gclid: Date.now(), fbclid: Date.now() },
 			utm_campaign: 'Summer Launch',
 			utm_term: ' ',
 		},
@@ -539,7 +576,10 @@ for (const choice of ['granted', 'analytics_only'] as const) {
 		location.href = 'https://example.com/landing?' + new URLSearchParams(utms)
 		const signal = createSignalBrowser({ region: 'EU', ingest })
 		location.href = 'https://example.com/signup?' + new URLSearchParams(clicks)
+		const seen = Date.now()
+		const clock = jest.spyOn(Date, 'now').mockReturnValue(seen)
 		expect(signal.capture()).toEqual({})
+		clock.mockRestore()
 		expect(await signal.track({ eventName: 'before_consent' })).toBe(false)
 		expect(await signal.pageView()).toBe(false)
 		location.href = 'https://example.com/checkout?utm_content=banner'
@@ -552,7 +592,9 @@ for (const choice of ['granted', 'analytics_only'] as const) {
 		const expected = choice === 'granted' ? { ...utms, ...clicks } : utms
 		const capture = signal.capture()
 		expect(capture).toEqual(
-			choice === 'granted' ? { ...expected, capturedAt: expect.any(Number) } : expected,
+			choice === 'granted'
+				? { ...expected, firstSeenAt: { gclid: seen, gbraid: seen, wbraid: seen, fbclid: seen } }
+				: expected,
 		)
 		expect(JSON.parse(values.get(touchStorageSlot)!).touch).toEqual(capture)
 		expect(calls).toHaveLength(0) // Pending view was for /signup, not /checkout.
@@ -572,6 +614,40 @@ for (const choice of ['granted', 'analytics_only'] as const) {
 		signal.dispose()
 	})
 }
+
+test('stored click IDs without a first sighting or past max age are dropped on read', () => {
+	const { values, location } = browser()
+	const now = Date.parse('2026-11-27T00:00:00Z')
+	const clock = jest.spyOn(Date, 'now').mockReturnValue(now)
+	try {
+		values.set(consentStorageSlot, 'granted')
+		const store = (touch: unknown) =>
+			values.set(touchStorageSlot, JSON.stringify({ expiresAt: now + 1000, touch }))
+		const stored = () => JSON.parse(values.get(touchStorageSlot)!).touch
+		location.href = 'https://example.com/'
+		store({ gclid: 'Legacy', fbclid: 'Legacy', capturedAt: now - 1000, utm_source: 's' })
+		const signal = createSignalBrowser({ region: 'US', clickIdMaxAgeMs: 7 * 86_400_000 })
+		expect(signal.capture()).toEqual({ utm_source: 's' })
+		expect(stored()).toEqual({ utm_source: 's' })
+		store({
+			gclid: 'Old',
+			wbraid: 'Ancient',
+			firstSeenAt: { gclid: now - 8 * 86_400_000, wbraid: 1 },
+		})
+		expect(signal.capture()).toEqual({})
+		const firstSeenAt = { gclid: now - 86_400_000 }
+		store({ gclid: 'Fresh', utm_source: 's', firstSeenAt })
+		// Re-landing on the same click ID keeps its first sighting.
+		location.href = 'https://example.com/?gclid=Fresh&utm_source=t'
+		expect(signal.capture()).toEqual({ gclid: 'Fresh', utm_source: 't', firstSeenAt })
+		clock.mockReturnValue(now + 7 * 86_400_000)
+		location.href = 'https://example.com/'
+		expect(signal.capture()).toEqual({ utm_source: 't' })
+		signal.dispose()
+	} finally {
+		clock.mockRestore()
+	}
+})
 
 test('explicit denial clears pending campaign and pageview, and survives ROW reload', async () => {
 	const { location, writes, values, removals } = browser()
