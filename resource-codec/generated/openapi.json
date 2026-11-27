@@ -30066,6 +30066,17 @@
           "source": {
             "description": "The answering grant's source, for example `<checkout session>/line_items/<n>`:\nthe `grant` claim of an offline licence token.",
             "type": "string"
+          },
+          "start_time": {
+            "description": "Inclusive effective start of the answering windowed grant.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/sylphx.money.v1.Subject",
+            "description": "Subject of the answering grant when a windowed term answers.",
+            "readOnly": true
           }
         },
         "type": "object"
@@ -31223,6 +31234,12 @@
             "readOnly": true,
             "type": "string"
           },
+          "start_time": {
+            "description": "Inclusive effective start of a windowed grant; unset for immediate access.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
           "subject": {
             "$ref": "#/components/schemas/sylphx.money.v1.Subject",
             "description": "Who holds it."
@@ -31934,6 +31951,10 @@
       "sylphx.money.v1.LicencePolicy": {
         "description": "A LicencePolicy is the product-owned rule for the offline licence a paid\none-time purchase of the product carries. Written by the merchant with the\ncatalog (`billing:write`); it names no key material, only the LicenceKey that\nsigns. A licence is refused on a consumable product and on a product with a\nrecurring price. There is no grace period.",
         "properties": {
+          "enforce_term_window": {
+            "description": "Enforce the frozen effective start, including deferred renewals. Unset\nor false retains legacy immediate access.",
+            "type": "boolean"
+          },
           "key": {
             "description": "The id of the LicenceKey that signs new terms.",
             "type": "string",
@@ -32032,6 +32053,12 @@
           },
           "source": {
             "description": "The grant source the term was frozen for:\n`<checkout session name>/line_items/<n>`.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "start_time": {
+            "description": "Inclusive effective start of the term; unset for legacy tokens.",
+            "format": "date-time",
             "readOnly": true,
             "type": "string"
           },

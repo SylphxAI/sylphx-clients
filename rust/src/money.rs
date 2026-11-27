@@ -841,6 +841,20 @@ pub struct CheckEntitlementResponse {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub decision: Option<EntitlementDecision>,
+    /// Inclusive effective start of the answering windowed grant.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "startTime"
+    )]
+    pub start_time: String,
+    /// Subject of the answering grant when a windowed term answers.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subject: Option<Subject>,
 }
 
 /// Request for CheckMerchantAccountProcessorPermissions. Read-only Stripe
@@ -2307,6 +2321,15 @@ pub struct EntitlementGrant {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub approver: String,
+    /// Inclusive effective start of a windowed grant; unset for immediate access.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "startTime"
+    )]
+    pub start_time: String,
 }
 
 /// An Exchange Rate is the units of one currency per US dollar on one day,
@@ -3036,6 +3059,14 @@ pub struct LicencePolicy {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub term: Option<LicenceTerm>,
+    /// Enforce the frozen effective start, including deferred renewals. Unset
+    /// or false retains legacy immediate access.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "enforceTermWindow"
+    )]
+    pub enforce_term_window: bool,
 }
 
 /// A LicenceTerm is a length of time with explicit arithmetic: `days` add
@@ -3124,6 +3155,15 @@ pub struct LicenceToken {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub seats: i32,
+    /// Inclusive effective start of the term; unset for legacy tokens.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "startTime"
+    )]
+    pub start_time: String,
 }
 
 /// A Line Item is one catalog price and its quantity.

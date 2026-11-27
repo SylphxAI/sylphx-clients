@@ -369,6 +369,10 @@ export interface CheckEntitlementResponse {
 	 * Missing or unspecified is not an authoritative answer.
 	 */
 	readonly decision?: EntitlementDecision
+	/** Inclusive effective start of the answering windowed grant. */
+	readonly startTime?: string
+	/** Subject of the answering grant when a windowed term answers. */
+	readonly subject?: Subject
 }
 
 /**
@@ -1037,6 +1041,8 @@ export interface EntitlementGrant {
 	 * never a request field.
 	 */
 	readonly approver?: string
+	/** Inclusive effective start of a windowed grant; unset for immediate access. */
+	readonly startTime?: string
 }
 
 /**
@@ -1420,6 +1426,11 @@ export interface LicencePolicy {
 	key?: string
 	/** How long one purchase lasts. */
 	term?: LicenceTerm
+	/**
+	 * Enforce the frozen effective start, including deferred renewals. Unset
+	 * or false retains legacy immediate access.
+	 */
+	enforceTermWindow?: boolean
 }
 
 /**
@@ -1464,6 +1475,8 @@ export interface LicenceToken {
 	readonly expireTime?: string
 	/** The seats the token carries. */
 	readonly seats?: number
+	/** Inclusive effective start of the term; unset for legacy tokens. */
+	readonly startTime?: string
 }
 
 /** A Line Item is one catalog price and its quantity. */
@@ -3630,6 +3643,8 @@ runtime.registerSchemas({
 	'sylphx.money.v1.CheckEntitlementResponse': [
 		['entitlementGrant', 'entitlement_grant'],
 		['expireTime', 'expire_time'],
+		['startTime', 'start_time'],
+		['subject', 'subject', 'sylphx.money.v1.Subject'],
 	],
 	'sylphx.money.v1.CheckMerchantAccountProcessorPermissionsRequest': [],
 	'sylphx.money.v1.CheckMerchantAccountProcessorPermissionsResponse': [
@@ -3810,6 +3825,7 @@ runtime.registerSchemas({
 		['subject', 'subject', 'sylphx.money.v1.Subject'],
 		['expireTime', 'expire_time'],
 		['approvalRef', 'approval_ref'],
+		['startTime', 'start_time'],
 	],
 	'sylphx.money.v1.ExchangeRate': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -3894,6 +3910,7 @@ runtime.registerSchemas({
 	'sylphx.money.v1.LicencePolicy': [
 		['tokenProduct', 'token_product'],
 		['term', 'term', 'sylphx.money.v1.LicenceTerm'],
+		['enforceTermWindow', 'enforce_term_window'],
 	],
 	'sylphx.money.v1.LicenceTerm': [],
 	'sylphx.money.v1.LicenceToken': [
@@ -3901,6 +3918,7 @@ runtime.registerSchemas({
 		['tokenProduct', 'token_product'],
 		['issueTime', 'issue_time'],
 		['expireTime', 'expire_time'],
+		['startTime', 'start_time'],
 	],
 	'sylphx.money.v1.LineItem': [],
 	'sylphx.money.v1.ListBankReceiptsRequest': [

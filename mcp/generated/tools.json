@@ -29523,6 +29523,10 @@
                           "additionalProperties": false,
                           "description": "The offline licence a paid one-time purchase carries; refused on a\nconsumable product and on a product with a recurring price.",
                           "properties": {
+                            "enforce_term_window": {
+                              "description": "Enforce the frozen effective start, including deferred renewals. Unset\nor false retains legacy immediate access.",
+                              "type": "boolean"
+                            },
                             "key": {
                               "description": "The id of the LicenceKey that signs new terms.",
                               "type": "string",
