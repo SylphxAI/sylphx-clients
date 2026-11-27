@@ -2257,6 +2257,14 @@ pub struct McpServer {
     /// The credential the gateway presents to the server.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub credential: Option<CredentialBinding>,
+    /// Non-secret routing headers pinned to this version. With headers, the turn
+    /// must supply a captured bearer handle scoped only to this server label.
+    #[serde(
+        default,
+        skip_serializing_if = "std::collections::BTreeMap::is_empty",
+        alias = "requestHeaders"
+    )]
+    pub request_headers: std::collections::BTreeMap<String, String>,
 }
 
 /// A Memory is one long-term memory record: a fact with its provenance.

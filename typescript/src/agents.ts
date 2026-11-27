@@ -1075,6 +1075,11 @@ export interface McpServer {
 	allowedTools?: string[]
 	/** The credential the gateway presents to the server. */
 	credential?: CredentialBinding
+	/**
+	 * Non-secret routing headers pinned to this version. With headers, the turn
+	 * must supply a captured bearer handle scoped only to this server label.
+	 */
+	requestHeaders?: Record<string, string>
 }
 
 /** A Memory is one long-term memory record: a fact with its provenance. */
@@ -2385,6 +2390,7 @@ runtime.registerSchemas({
 	'sylphx.agents.v1.McpServer': [
 		['allowedTools', 'allowed_tools'],
 		['credential', 'credential', 'sylphx.agents.v1.CredentialBinding'],
+		['requestHeaders', 'request_headers', undefined, 'map'],
 	],
 	'sylphx.agents.v1.Memory': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],

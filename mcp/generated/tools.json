@@ -2383,6 +2383,13 @@
                           "description": "The label its tools are prefixed with, unique within the agent.",
                           "type": "string"
                         },
+                        "request_headers": {
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "Non-secret routing headers pinned to this version. With headers, the turn\nmust supply a captured bearer handle scoped only to this server label.",
+                          "type": "object"
+                        },
                         "uri": {
                           "description": "The server's Streamable HTTP endpoint.",
                           "type": "string"
@@ -2889,6 +2896,13 @@
                         "label": {
                           "description": "The label its tools are prefixed with, unique within the agent.",
                           "type": "string"
+                        },
+                        "request_headers": {
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "Non-secret routing headers pinned to this version. With headers, the turn\nmust supply a captured bearer handle scoped only to this server label.",
+                          "type": "object"
                         },
                         "uri": {
                           "description": "The server's Streamable HTTP endpoint.",
@@ -52749,6 +52763,13 @@
                         "label": {
                           "description": "The label its tools are prefixed with, unique within the agent.",
                           "type": "string"
+                        },
+                        "request_headers": {
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "Non-secret routing headers pinned to this version. With headers, the turn\nmust supply a captured bearer handle scoped only to this server label.",
+                          "type": "object"
                         },
                         "uri": {
                           "description": "The server's Streamable HTTP endpoint.",
