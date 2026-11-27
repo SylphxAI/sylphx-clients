@@ -6850,7 +6850,7 @@
         "properties": {
           "active_users": {
             "additionalProperties": false,
-            "description": "Exact distinct active subjects per UTC day, Monday-start week, or calendar month.",
+            "description": "Exact distinct active subjects per day, Monday-start week, or calendar month.",
             "properties": {
               "breakdown_property": {
                 "description": "Top-level string property per qualifying event. Omit for unsegmented\nbuckets. A dot is literal, not a path. Missing or non-string values\ngroup with the empty string. A subject may contribute to multiple groups.",
@@ -7030,7 +7030,7 @@
           },
           "sessions": {
             "additionalProperties": false,
-            "description": "Session count and exact median duration by UTC start day.",
+            "description": "Session count and exact median duration by session start day.",
             "properties": {
               "breakdown_property": {
                 "description": "String property of the first in-window event, whose UTC day owns the session.\nA supplied SDK session ID is not split on sign-in, midnight, or idle gaps.\nWithout an SDK ID, consecutive events on the same stored subject form a\nsession until a gap strictly exceeds 30 minutes. Omit for unsegmented\nbuckets. A dot is literal, not a path. Missing or non-string values group\nwith the empty string.",
@@ -7054,6 +7054,10 @@
           "start_time": {
             "description": "Inclusive start of the interval, at most 31 days before end_time.",
             "format": "date-time",
+            "type": "string"
+          },
+          "time_zone": {
+            "description": "Case-sensitive IANA reporting time zone for calendar buckets; defaults to UTC.\nBucket starts are UTC instants; the query interval and funnel are unchanged.",
             "type": "string"
           }
         },
@@ -53774,7 +53778,7 @@
         "properties": {
           "active_users": {
             "additionalProperties": false,
-            "description": "Exact distinct active subjects per UTC day, Monday-start week, or calendar month.",
+            "description": "Exact distinct active subjects per day, Monday-start week, or calendar month.",
             "properties": {
               "breakdown_property": {
                 "description": "Top-level string property per qualifying event. Omit for unsegmented\nbuckets. A dot is literal, not a path. Missing or non-string values\ngroup with the empty string. A subject may contribute to multiple groups.",
@@ -53954,7 +53958,7 @@
           },
           "sessions": {
             "additionalProperties": false,
-            "description": "Session count and exact median duration by UTC start day.",
+            "description": "Session count and exact median duration by session start day.",
             "properties": {
               "breakdown_property": {
                 "description": "String property of the first in-window event, whose UTC day owns the session.\nA supplied SDK session ID is not split on sign-in, midnight, or idle gaps.\nWithout an SDK ID, consecutive events on the same stored subject form a\nsession until a gap strictly exceeds 30 minutes. Omit for unsegmented\nbuckets. A dot is literal, not a path. Missing or non-string values group\nwith the empty string.",
@@ -53978,6 +53982,10 @@
           "start_time": {
             "description": "Inclusive start of the interval, at most 31 days before end_time.",
             "format": "date-time",
+            "type": "string"
+          },
+          "time_zone": {
+            "description": "Case-sensitive IANA reporting time zone for calendar buckets; defaults to UTC.\nBucket starts are UTC instants; the query interval and funnel are unchanged.",
             "type": "string"
           }
         },

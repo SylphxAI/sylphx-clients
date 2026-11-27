@@ -353,10 +353,15 @@ export interface QueryAnalyticsEventsRequest {
 	funnel?: FunnelQuery
 	/** Calendar cohorts and exact subject retention by period. */
 	retention?: RetentionQuery
-	/** Exact distinct active subjects per UTC day, Monday-start week, or calendar month. */
+	/** Exact distinct active subjects per day, Monday-start week, or calendar month. */
 	activeUsers?: ActiveUsersQuery
-	/** Session count and exact median duration by UTC start day. */
+	/** Session count and exact median duration by session start day. */
 	sessions?: SessionsQuery
+	/**
+	 * Case-sensitive IANA reporting time zone for calendar buckets; defaults to UTC.
+	 * Bucket starts are UTC instants; the query interval and funnel are unchanged.
+	 */
+	timeZone?: string
 }
 
 /** The response of QueryAnalyticsEvents. Only the requested result is populated. */
@@ -581,6 +586,7 @@ runtime.registerSchemas({
 		['retention', 'retention', 'sylphx.analytics.v1.RetentionQuery'],
 		['activeUsers', 'active_users', 'sylphx.analytics.v1.ActiveUsersQuery'],
 		['sessions', 'sessions', 'sylphx.analytics.v1.SessionsQuery'],
+		['timeZone', 'time_zone'],
 	],
 	'sylphx.analytics.v1.QueryAnalyticsEventsResponse': [
 		['rollupBuckets', 'rollup_buckets', 'sylphx.analytics.v1.AnalyticsRollupBucket'],

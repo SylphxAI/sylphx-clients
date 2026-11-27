@@ -23827,7 +23827,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "Exact distinct active subjects per UTC day, Monday-start week, or calendar month.",
+          "doc": "Exact distinct active subjects per day, Monday-start week, or calendar month.",
           "filterable": false,
           "name": "active_users",
           "number": 7,
@@ -23846,7 +23846,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "Session count and exact median duration by UTC start day.",
+          "doc": "Session count and exact median duration by session start day.",
           "filterable": false,
           "name": "sessions",
           "number": 8,
@@ -23858,6 +23858,25 @@
           "type": {
             "kind": "message",
             "name": "sylphx.analytics.v1.SessionsQuery"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Case-sensitive IANA reporting time zone for calendar buckets; defaults to UTC.\nBucket starts are UTC instants; the query interval and funnel are unchanged.",
+          "filterable": false,
+          "name": "time_zone",
+          "number": 9,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
           }
         }
       ],

@@ -697,16 +697,24 @@ pub struct QueryAnalyticsEventsRequest {
     /// Calendar cohorts and exact subject retention by period.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub retention: Option<RetentionQuery>,
-    /// Exact distinct active subjects per UTC day, Monday-start week, or calendar month.
+    /// Exact distinct active subjects per day, Monday-start week, or calendar month.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         alias = "activeUsers"
     )]
     pub active_users: Option<ActiveUsersQuery>,
-    /// Session count and exact median duration by UTC start day.
+    /// Session count and exact median duration by session start day.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sessions: Option<SessionsQuery>,
+    /// Case-sensitive IANA reporting time zone for calendar buckets; defaults to UTC.
+    /// Bucket starts are UTC instants; the query interval and funnel are unchanged.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "timeZone"
+    )]
+    pub time_zone: String,
 }
 
 /// The response of QueryAnalyticsEvents. Only the requested result is populated.

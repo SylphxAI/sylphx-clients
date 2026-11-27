@@ -6147,7 +6147,7 @@
         "properties": {
           "active_users": {
             "$ref": "#/components/schemas/sylphx.analytics.v1.ActiveUsersQuery",
-            "description": "Exact distinct active subjects per UTC day, Monday-start week, or calendar month."
+            "description": "Exact distinct active subjects per day, Monday-start week, or calendar month."
           },
           "end_time": {
             "description": "Exclusive end of the interval; defaults to now.",
@@ -6173,11 +6173,15 @@
           },
           "sessions": {
             "$ref": "#/components/schemas/sylphx.analytics.v1.SessionsQuery",
-            "description": "Session count and exact median duration by UTC start day."
+            "description": "Session count and exact median duration by session start day."
           },
           "start_time": {
             "description": "Inclusive start of the interval, at most 31 days before end_time.",
             "format": "date-time",
+            "type": "string"
+          },
+          "time_zone": {
+            "description": "Case-sensitive IANA reporting time zone for calendar buckets; defaults to UTC.\nBucket starts are UTC instants; the query interval and funnel are unchanged.",
             "type": "string"
           }
         },
@@ -70996,7 +71000,7 @@
                 "properties": {
                   "active_users": {
                     "$ref": "#/components/schemas/sylphx.analytics.v1.ActiveUsersQuery",
-                    "description": "Exact distinct active subjects per UTC day, Monday-start week, or calendar month."
+                    "description": "Exact distinct active subjects per day, Monday-start week, or calendar month."
                   },
                   "end_time": {
                     "description": "Exclusive end of the interval; defaults to now.",
@@ -71017,11 +71021,15 @@
                   },
                   "sessions": {
                     "$ref": "#/components/schemas/sylphx.analytics.v1.SessionsQuery",
-                    "description": "Session count and exact median duration by UTC start day."
+                    "description": "Session count and exact median duration by session start day."
                   },
                   "start_time": {
                     "description": "Inclusive start of the interval, at most 31 days before end_time.",
                     "format": "date-time",
+                    "type": "string"
+                  },
+                  "time_zone": {
+                    "description": "Case-sensitive IANA reporting time zone for calendar buckets; defaults to UTC.\nBucket starts are UTC instants; the query interval and funnel are unchanged.",
                     "type": "string"
                   }
                 },

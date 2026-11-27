@@ -4268,14 +4268,20 @@
                 {
                   "field": "active_users",
                   "flag": "--active-users",
-                  "summary": "Exact distinct active subjects per UTC day, Monday-start week, or calendar month.",
+                  "summary": "Exact distinct active subjects per day, Monday-start week, or calendar month.",
                   "type": "json"
                 },
                 {
                   "field": "sessions",
                   "flag": "--sessions",
-                  "summary": "Session count and exact median duration by UTC start day.",
+                  "summary": "Session count and exact median duration by session start day.",
                   "type": "json"
+                },
+                {
+                  "field": "time_zone",
+                  "flag": "--time-zone",
+                  "summary": "Case-sensitive IANA reporting time zone for calendar buckets; defaults to UTC. Bucket starts are UTC instants; the query interval and funnel are unchanged.",
+                  "type": "string"
                 }
               ],
               "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/analytics_events:query",
