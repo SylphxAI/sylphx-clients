@@ -13,7 +13,7 @@ export interface SignalConsent {
 }
 
 export interface SignalPrivacy {
-	/** EU/EEA/UK/CH, a two-letter country code, or explicit ROW. Missing/invalid is strict. */
+	/** EU/EEA/UK/CH/KR, a two-letter country code, or explicit ROW. Missing/invalid is strict. */
 	region?: string
 	/** The user's explicit choice, not a boolean inferred from banner visibility. */
 	storedChoice?: SignalConsentChoice
@@ -22,7 +22,7 @@ export interface SignalPrivacy {
 }
 
 const optIn = new Set(
-	'AT BE BG HR CY CZ DK EE FI FR DE GR HU IE IT LV LT LU MT NL PL PT RO SK SI ES SE IS LI NO GB UK CH EU EEA AX GF GP MQ MF RE YT'.split(
+	'AT BE BG HR CY CZ DK EE FI FR DE GR HU IE IT LV LT LU MT NL PL PT RO SK SI ES SE IS LI NO GB UK CH KR EU EEA AX GF GP MQ MF RE YT'.split(
 		' ',
 	),
 )

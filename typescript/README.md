@@ -96,7 +96,7 @@ await signal.bindCheckoutAttribution({ checkoutSessionId }, {
 })
 ```
 
-EU/EEA/UK/CH and unknown regions deny collection by default. Known opt-out
+EU/EEA/UK/CH/KR and unknown regions deny collection by default. Known opt-out
 regions grant all four Consent Mode flags unless the user chooses otherwise.
 Choose `analytics_only` to grant analytics storage while denying all three
 ad flags. Checkout can send GA4 identifiers and an optional public page URL
