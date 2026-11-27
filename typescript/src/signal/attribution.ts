@@ -181,10 +181,22 @@ export function parseAttributionCookies(
 }
 
 /** Expects a cleaned touch: every click ID has its observed first-seen time. */
-export function signalAdFields(touch: SignalAttribution, cookies: AttributionCookies) {
+export function signalAdFields(
+	touch: SignalAttribution,
+	cookies: AttributionCookies,
+	suppliedFbclid?: unknown,
+) {
 	const seen = touch.firstSeenAt ?? {}
 	const derivedFbc =
 		touch.fbclid && seen.fbclid && cleanValue(`fb.1.${seen.fbclid}.${touch.fbclid}`, 256)
+	const cookieClick = cookies.fbc?.split('.').slice(3).join('.')
+	// A cookie can back up a supplied click only when it identifies that same click.
+	let fbc = cookies.fbc
+	if (touch.fbclid) {
+		if (cookieClick !== touch.fbclid) fbc = derivedFbc || undefined
+	} else if (suppliedFbclid !== undefined && suppliedFbclid !== '') {
+		if (typeof suppliedFbclid !== 'string' || cookieClick !== suppliedFbclid) fbc = undefined
+	}
 	return {
 		gclid: touch.gclid,
 		gclid_first_seen_at: seen.gclid,
@@ -192,10 +204,7 @@ export function signalAdFields(touch: SignalAttribution, cookies: AttributionCoo
 		gbraid_first_seen_at: seen.gbraid,
 		wbraid: touch.wbraid,
 		wbraid_first_seen_at: seen.wbraid,
-		fbc:
-			touch.fbclid && cookies.fbc?.split('.').slice(3).join('.') === touch.fbclid
-				? cookies.fbc
-				: derivedFbc || cookies.fbc,
+		fbc,
 		fbp: cookies.fbp,
 	}
 }

@@ -118,14 +118,17 @@ export async function bindCheckoutAttribution(
 			options.readCookies?.() ??
 			(typeof document !== 'undefined' ? document.cookie : '')
 		const cookies = parseAttributionCookies(cookieHeader, options.gaMeasurementId, { analytics, ads })
-		const touch = cleanAttribution(options.attribution, ads, options.clickIdMaxAgeMs)
+		const attribution = options.attribution
+		const touch = cleanAttribution(attribution, ads, options.clickIdMaxAgeMs)
 		if (analytics) {
 			payload.ga_client_id = cookies.gaClientId
 			payload.ga_session_id = cookies.gaSessionId
 			payload.page_location = signalPageLocation(options.pageLocation, touch)
 		}
 		if (ads) {
-			Object.assign(payload, signalAdFields(touch, cookies))
+			const suppliedFbclid =
+				attribution && typeof attribution === 'object' ? attribution.fbclid : undefined
+			Object.assign(payload, signalAdFields(touch, cookies, suppliedFbclid))
 			payload.user_agent = cleanValue(options.headers?.get('User-Agent'), 512, true)
 		}
 	}

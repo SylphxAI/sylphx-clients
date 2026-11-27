@@ -56,6 +56,8 @@ export interface SignalIngestOptions {
 	/** HTTPS API origin; defaults to https://api.sylphx.com. */
 	baseUrl?: string
 	fetch?: typeof fetch
+	/** Set 'none' for JSON-only transports. Default: 'gzip' when supported and beneficial. */
+	compression?: 'gzip' | 'none'
 	/** Override the generated anonymous ID. The supplied ID is never persisted by Signal. */
 	distinctId?: string
 	/** Override the generated session ID. The supplied ID is never persisted by Signal. */
@@ -200,6 +202,13 @@ function identitySlot(storage: 'localStorage' | 'sessionStorage', key: string) {
 }
 
 function ingestEndpoint(ingest: SignalIngestOptions): string | undefined {
+	if (
+		ingest.compression !== undefined &&
+		ingest.compression !== 'gzip' &&
+		ingest.compression !== 'none'
+	) {
+		throw new TypeError('Signal ingest compression must be "gzip" or "none"')
+	}
 	if (typeof ingest.apiKey !== 'string' || !ingest.apiKey.startsWith('sylphx_pk_')) return undefined
 	try {
 		const url = new URL(ingest.baseUrl ?? 'https://api.sylphx.com')
@@ -605,7 +614,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 			let body: BodyInit = json
 			const headers: Record<string, string> = {}
 			try {
-				if (typeof CompressionStream === 'function') {
+				if (ingest.compression !== 'none' && typeof CompressionStream === 'function') {
 					const utf8 = new Blob([json])
 					if (utf8.size >= gzipMinBytes) {
 						const stream = utf8.stream().pipeThrough(new CompressionStream('gzip'))

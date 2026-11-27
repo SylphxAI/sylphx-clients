@@ -179,6 +179,101 @@ test('click IDs need an observed, unexpired first-seen time before binding', asy
 	}
 })
 
+const metaNow = Date.parse('2026-11-27T00:00:00Z')
+const metaMaxAge = 60 * 60 * 1000
+const metaFresh = metaNow - 1000
+const metaClick = 'Current.Click'
+const sameCookie = `fb.2.${metaNow - metaMaxAge - 1}.${metaClick}`
+const otherCookie = 'fb.1.1700000000000.OriginalClick'
+
+async function bindMeta(attribution: SignalAttribution | undefined, fbc: string) {
+	const clock = jest.spyOn(Date, 'now').mockReturnValue(metaNow)
+	try {
+		const { options, requests } = transport()
+		await bindCheckoutAttribution(ids, {
+			...options,
+			privacy: { region: 'US' },
+			headers: new Headers({ cookie: [cookie.replace(otherCookie, fbc), gaCookie].join('; ') }),
+			gaMeasurementId: 'G-TEST123',
+			attribution,
+			clickIdMaxAgeMs: metaMaxAge,
+			pageLocation: new URL('https://example.com/landing'),
+		})
+		return await requests[0]!.json()
+	} finally {
+		clock.mockRestore()
+	}
+}
+
+const metaCases = [
+	['untimed', { fbclid: metaClick }],
+	['legacy', { fbclid: metaClick, capturedAt: metaFresh }],
+	['expired', { fbclid: metaClick, firstSeenAt: { fbclid: metaNow - metaMaxAge - 1 } }],
+	['future-skewed', { fbclid: metaClick, firstSeenAt: { fbclid: metaNow + 10 * 60 * 1000 } }],
+] as const
+
+test.each([
+	...metaCases,
+	['invalid', { fbclid: 'Not A Click', firstSeenAt: { fbclid: metaFresh } }],
+	['non-string', { fbclid: null as never, firstSeenAt: { fbclid: metaFresh } }],
+] as const)('does not substitute another Meta click when the supplied click is %s', async (_mode, input) => {
+	const body = await bindMeta(
+		{
+			...input,
+			gclid: 'GoogleClick',
+			gbraid: 'Braid',
+			wbraid: 'WebBraid',
+			utm_campaign: 'Summer Launch',
+			firstSeenAt: {
+				gclid: metaFresh,
+				gbraid: metaFresh,
+				wbraid: metaFresh,
+				...('firstSeenAt' in input ? input.firstSeenAt : {}),
+			},
+		},
+		otherCookie,
+	)
+	expect(body).toEqual({
+		checkout_session_id: ids.checkoutSessionId,
+		consent: granted,
+		ga_client_id: '12345.67890',
+		ga_session_id: '1700000000',
+		gclid: 'GoogleClick',
+		gclid_first_seen_at: metaFresh,
+		gbraid: 'Braid',
+		gbraid_first_seen_at: metaFresh,
+		wbraid: 'WebBraid',
+		wbraid_first_seen_at: metaFresh,
+		fbp: 'fb.1.1700000000000.56789',
+		page_location: 'https://example.com/landing?utm_campaign=Summer+Launch',
+	})
+})
+
+test.each([
+	...metaCases,
+	['fresh', { fbclid: metaClick, firstSeenAt: { fbclid: metaFresh } }],
+] as const)('keeps the exact same-click Meta cookie for %s attribution', async (_mode, attribution) => {
+	expect((await bindMeta(attribution, sameCookie)).fbc).toBe(sameCookie)
+})
+
+test('derives a fresh Meta click and never substitutes an unrelated cookie if it is oversized', async () => {
+	const firstSeenAt = { fbclid: metaFresh }
+	expect((await bindMeta({ fbclid: metaClick, firstSeenAt }, otherCookie)).fbc).toBe(
+		`fb.1.${metaFresh}.${metaClick}`,
+	)
+	expect(await bindMeta({ fbclid: 'a'.repeat(256), firstSeenAt }, otherCookie)).not.toHaveProperty(
+		'fbc',
+	)
+})
+
+test.each([
+	undefined,
+	{ utm_source: 'newsletter' },
+	{ fbclid: '' },
+])('keeps cookie-only Meta attribution when no fbclid was supplied (%j)', async (attribution) => {
+	expect((await bindMeta(attribution, otherCookie)).fbc).toBe(otherCookie)
+})
+
 for (const region of ['US', 'CA', 'AU']) {
 	test(
 		region +
@@ -1395,13 +1490,16 @@ const noteAtSize = (size: number) => {
 	const bytes = size - new TextEncoder().encode(gzipWire('')).byteLength
 	return 'é'.repeat(Math.floor(bytes / 2)) + 'a'.repeat(bytes % 2)
 }
-function gzipBrowser(result?: (attempt: number) => Response) {
+function gzipBrowser(
+	result?: (attempt: number) => Response,
+	options: Pick<SignalIngestOptions, 'compression'> = {},
+) {
 	const state = browser()
 	state.location.href = 'https://example.com/landing'
 	const { ingest, calls } = ingestTransport(result)
 	const signal = createSignalBrowser({
 		region: 'ROW',
-		ingest: { ...ingest, distinctId: 'anon', sessionId: 'session' },
+		ingest: { ...ingest, distinctId: 'anon', sessionId: 'session', ...options },
 	})
 	return { ...state, signal, calls }
 }
@@ -1441,8 +1539,8 @@ test('uses gzip at exactly 1024 UTF-8 bytes and reuses the same buffered request
 	signal.dispose()
 })
 
-test('trackBatch compresses across the UTF-8 threshold and retries identical bytes once', async () => {
-	const { signal, calls } = gzipBrowser(() => unavailable('0'))
+test('explicit gzip compresses batches across the UTF-8 threshold and retries identical bytes once', async () => {
+	const { signal, calls } = gzipBrowser(() => unavailable('0'), { compression: 'gzip' })
 	const note = 'é'.repeat(180)
 	const events = Array.from({ length: 2 }, (_, i) => ({
 		...gzipEvent,
@@ -1472,6 +1570,76 @@ test('trackBatch compresses across the UTF-8 threshold and retries identical byt
 	expect(calls[1]).toEqual(calls[0])
 	expect(calls[1]?.init?.body).toBe(body)
 	signal.dispose()
+})
+
+test.each([
+	false,
+	true,
+])('compression none works with a JSON-only proxy (retry: %s)', async (retry) => {
+	expect(typeof CompressionStream).toBe('function')
+	browser().location.href = 'https://example.com/landing'
+	const calls: RequestInit[] = []
+	const jsonOnly = (async (_url, init) => {
+		if (!init) return new Response(null, { status: 400 })
+		calls.push(init)
+		if (new Headers(init.headers).has('Content-Encoding'))
+			return new Response(null, { status: 415 })
+		try {
+			if (typeof init.body !== 'string' || !Array.isArray(JSON.parse(init.body).events))
+				return new Response(null, { status: 400 })
+		} catch {
+			return new Response(null, { status: 400 })
+		}
+		return retry && calls.length % 2 === 1 ? unavailable('0') : new Response(null, { status: 202 })
+	}) as typeof fetch
+	const signal = createSignalBrowser({
+		region: 'ROW',
+		ingest: {
+			apiKey: key,
+			fetch: jsonOnly,
+			distinctId: 'anon',
+			sessionId: 'session',
+			compression: 'none',
+		},
+	})
+	const note = noteAtSize(1025)
+	const single = { ...gzipEvent, properties: { note } }
+	const batch = Array.from({ length: 500 }, (_, i) => ({ ...gzipEvent, eventId: `batch:${i}` }))
+	const singleJson = gzipWire(note)
+	const batchJson = JSON.stringify({
+		consent: 'granted',
+		events: batch.map(({ eventId }) => ({
+			event_id: eventId,
+			event_name: 'visit',
+			distinct_id: 'anon',
+			session_id: 'session',
+			event_time: gzipEvent.eventTime,
+			properties: {},
+			is_error: false,
+		})),
+	})
+	expect(await signal.track(single)).toBe(true)
+	expect(await signal.trackBatch(batch)).toBe(true)
+	expect(calls.map(({ body }) => body)).toEqual(
+		retry ? [singleJson, singleJson, batchJson, batchJson] : [singleJson, batchJson],
+	)
+	for (const call of calls) {
+		const headers = new Headers(call.headers)
+		expect(headers.get('Content-Type')).toBe('application/json')
+		expect(headers.has('Content-Encoding')).toBe(false)
+		expect(typeof call.body).toBe('string')
+		expect(new TextEncoder().encode(call.body as string).byteLength).toBeGreaterThan(1024)
+	}
+	signal.dispose()
+})
+
+test('rejects unsupported ingest compression at configuration time', () => {
+	const { ingest, calls } = ingestTransport()
+	const create = () =>
+		createSignalBrowser({ ingest: { ...ingest, compression: 'deflate' as never } })
+	expect(create).toThrow(TypeError)
+	expect(create).toThrow('Signal ingest compression must be "gzip" or "none"')
+	expect(calls).toHaveLength(0)
 })
 
 test('trackBatch sends exactly 500 events without splitting the request', async () => {
