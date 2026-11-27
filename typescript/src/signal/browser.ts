@@ -42,6 +42,8 @@ export interface SignalBrowserOptions {
 	storageKey?: string
 	/** Click ID age ceiling in milliseconds, from first observation. Default: 90 days. */
 	clickIdMaxAgeMs?: number
+	/** Keep or omit validated campaign fields. Cannot change values, timestamps or cookie eligibility. */
+	projectAttribution?: (attribution: SignalAttribution) => SignalAttribution
 	google?: SignalGoogleConsent
 	ingest?: SignalIngestOptions
 	/** Track visible, active time after an explicit analytics grant. Default: false. */
@@ -81,6 +83,13 @@ type BrowserBindOptions = Pick<
 	BindCheckoutOptions,
 	'apiKey' | 'baseUrl' | 'fetch' | 'signal' | 'pageLocation' | 'gaMeasurementId'
 >
+// Include malformed and repeated values when deciding which URL keys to remove.
+const signalQueryFields = Object.keys({
+	gclid: true, gbraid: true, wbraid: true, fbclid: true,
+	utm_source: true, utm_medium: true, utm_campaign: true, utm_id: true,
+	utm_term: true, utm_content: true, utm_source_platform: true,
+	utm_creative_format: true, utm_marketing_tactic: true,
+} satisfies Record<Exclude<keyof SignalAttribution, 'firstSeenAt'>, true>)
 const touchLifetime = 30 * 24 * 60 * 60 * 1000
 const sessionGap = 30 * 60 * 1000
 const gzipMinBytes = 1024
@@ -230,6 +239,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 	const session = identitySlot('sessionStorage', `${storageKey}.session`)
 	const google = options.google
 	const clickIdMaxAgeMs = options.clickIdMaxAgeMs
+	const projectAttribution = options.projectAttribution
 	const ingest = options.ingest && { ...options.ingest }
 	const endpoint = ingest && ingestEndpoint(ingest)
 	let distinctId = ingest?.distinctId
@@ -341,6 +351,24 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 		return resolveEffectiveConsent(privacy)
 	}
 
+	function project(input: SignalAttribution): SignalAttribution {
+		if (!projectAttribution) return input
+		try {
+			const { firstSeenAt, ...fields } = input
+			const kept = projectAttribution({ ...fields, ...(firstSeenAt && { firstSeenAt: { ...firstSeenAt } }) })
+			if (!kept || typeof kept !== 'object' || Array.isArray(kept)) return {}
+			const result: SignalAttribution = {}
+			for (const field of Object.keys(fields) as (keyof typeof fields)[]) {
+				if (Object.hasOwn(kept, field) && kept[field] === fields[field]) result[field] = fields[field]
+			}
+			const seen = Object.entries(firstSeenAt ?? {}).filter(([field]) => Object.hasOwn(result, field))
+			if (seen.length) result.firstSeenAt = Object.fromEntries(seen)
+			return result
+		} catch {
+			return {}
+		}
+	}
+
 	function capture(): SignalAttribution | undefined {
 		const consent = sync()
 		if (requireExplicitConsent && consent.analytics_storage !== 'granted') return undefined
@@ -360,12 +388,12 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 		if (consent.analytics_storage !== 'granted') {
 			const latest = parseSignalAttribution(url, now)
 			if (Object.keys(latest).length)
-				pendingTouch = clean(mergeSignalAttribution(pendingTouch, latest), true)
+				pendingTouch = project(clean(mergeSignalAttribution(pendingTouch, latest), true))
 			return {}
 		}
 		const ads = allowsAds(consent)
 		if (current && current.expiresAt <= now) current = undefined
-		if (current) current.touch = clean(current.touch, ads)
+		if (current) current.touch = project(clean(current.touch, ads))
 		try {
 			const saved: unknown = JSON.parse(window.localStorage.getItem(touchKey) ?? 'null')
 			if (
@@ -377,9 +405,11 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 				saved.expiresAt <= now + touchLifetime &&
 				'touch' in saved
 			) {
-				current = { expiresAt: saved.expiresAt, touch: clean(saved.touch, ads) }
-				// On downgrade or click ID expiry, keep UTMs and their original expiry, but drop the IDs.
-				if (JSON.stringify(saved.touch) !== JSON.stringify(current.touch))
+				current = { expiresAt: saved.expiresAt, touch: project(clean(saved.touch, ads)) }
+				// Prune in place: restoring a touch must not extend its lifetime.
+				if (projectAttribution && !Object.keys(current.touch).length)
+					window.localStorage.removeItem(touchKey)
+				else if (JSON.stringify(saved.touch) !== JSON.stringify(current.touch))
 					window.localStorage.setItem(touchKey, JSON.stringify(current))
 			} else if (saved) window.localStorage.removeItem(touchKey)
 		} catch {
@@ -393,8 +423,8 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 		pendingTouch = undefined
 		if (Object.keys(latest).length) {
 			// A newer touch replaces the stored one; an unchanged click ID keeps its first sighting.
-			const touch = clean(mergeSignalAttribution(current?.touch, latest, true), ads)
-			if (JSON.stringify(touch) !== JSON.stringify(current?.touch)) {
+			const touch = project(clean(mergeSignalAttribution(current?.touch, latest, true), ads))
+			if ((!projectAttribution || Object.keys(touch).length) && JSON.stringify(touch) !== JSON.stringify(current?.touch)) {
 				current = { expiresAt: now + touchLifetime, touch }
 				try {
 					window.localStorage.setItem(touchKey, JSON.stringify(current))
@@ -435,7 +465,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 			attribution ??= capture()
 			if (!attribution || !canIngest()) return false
 			const ads = allowsAds(resolveEffectiveConsent(privacy))
-			const { firstSeenAt: _, ...campaign } = cleanAttribution(attribution, ads, clickIdMaxAgeMs)
+			const { firstSeenAt: _, ...campaign } = project(cleanAttribution(attribution, ads, clickIdMaxAgeMs))
 			const epoch = collectionEpoch
 			const stillAllowed = () => canSend(ads) && epoch === collectionEpoch
 			// Snapshot and validate the entire batch before assigning IDs or building a payload.
@@ -539,6 +569,13 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 			return Promise.resolve(false)
 		// Mark before starting fetch, including concurrent calls and ambiguous network failures.
 		viewed = { path, locationPath: route(new URL(window.location.href)) }
+		if (projectAttribution) {
+			const ads = allowsAds(resolveEffectiveConsent(privacy))
+			const kept = project(parseSignalAttribution(url, Date.now(), ads))
+			for (const field of signalQueryFields) {
+				if (url.searchParams.has(field) && !Object.hasOwn(kept, field)) url.searchParams.delete(field)
+			}
+		}
 		if (!allowsAds(resolveEffectiveConsent(privacy))) stripSignalClickIds(url)
 		return emitEvents([{ eventName: 'page_view', properties, eventId }], attribution, route(url))
 	}

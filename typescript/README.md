@@ -167,6 +167,10 @@ or `bindCheckoutAttribution`), is dropped on read and never sent. When you pass
 input's query and fragment but cannot know if a path contains personal data:
 only pass a public landing path.
 
+Set `projectAttribution` on `createSignalBrowser` to keep only selected campaign
+fields, including in page-view URLs. Return unchanged fields and omit the rest.
+This does not change consent or checkout cookie eligibility.
+
 ### Upload and download bytes without base64 glue
 
 Use the object helpers for in-memory files and buffers. They use the same
