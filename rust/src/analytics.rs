@@ -383,6 +383,24 @@ pub struct AnalyticsSessionBucket {
         alias = "medianDurationMs"
     )]
     pub median_duration_ms: Option<f64>,
+    /// Total foreground milliseconds from deduplicated $heartbeat and $session_end
+    /// events in qualifying sessions, attributed to the session's entry bucket.
+    /// Only finite JSON numbers from 0 to 86400000 inclusive in fg_ms count;
+    /// zero if none qualify.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "onlineTimeMs"
+    )]
+    pub online_time_ms: Option<f64>,
+    /// Online time divided by all qualifying sessions, in milliseconds; zero when
+    /// online time is zero.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "averageOnlineTimeMs"
+    )]
+    pub average_online_time_ms: Option<f64>,
 }
 
 /// The request of BatchEvents. A batch has at most 500 events and 1 MiB
@@ -1495,6 +1513,9 @@ impl<'a, T: crate::runtime::Transport> AnalyticsEventsCollection<'a, T> {
 
     /// Lists the environment's raw events in a time range, newest first.
     ///
+    /// Unlike public ingest (`POST /v1/analytics/events:batch`), this route requires
+    /// `service_enablements/analytics` to be enabled on the project.
+    ///
     /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/analytics_events` · permission `analytics:read` · effect `read`
     ///
     /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
@@ -1542,6 +1563,9 @@ impl<'a, T: crate::runtime::Transport> AnalyticsEventsCollection<'a, T> {
     }
 
     /// Aggregates deduplicated events in the environment over a bounded interval.
+    ///
+    /// Unlike public ingest (`POST /v1/analytics/events:batch`), this route requires
+    /// `service_enablements/analytics` to be enabled on the project.
     ///
     /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/analytics_events:query` · permission `analytics:read` · effect `read`
     ///

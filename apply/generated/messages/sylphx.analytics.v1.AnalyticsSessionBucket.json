@@ -63,6 +63,38 @@
         "kind": "scalar",
         "scalar": "double"
       }
+    },
+    {
+      "behaviors": [],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "online_time_ms",
+      "number": 5,
+      "oneof": null,
+      "optional": true,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "double"
+      }
+    },
+    {
+      "behaviors": [],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "average_online_time_ms",
+      "number": 6,
+      "oneof": null,
+      "optional": true,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "double"
+      }
     }
   ],
   "name": "sylphx.analytics.v1.AnalyticsSessionBucket",

@@ -23041,6 +23041,40 @@
             "kind": "scalar",
             "scalar": "double"
           }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Total foreground milliseconds from deduplicated $heartbeat and $session_end\nevents in qualifying sessions, attributed to the session's entry bucket.\nOnly finite JSON numbers from 0 to 86400000 inclusive in fg_ms count;\nzero if none qualify.",
+          "filterable": false,
+          "name": "online_time_ms",
+          "number": 5,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "double"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Online time divided by all qualifying sessions, in milliseconds; zero when\nonline time is zero.",
+          "filterable": false,
+          "name": "average_online_time_ms",
+          "number": 6,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "double"
+          }
         }
       ],
       "name": "sylphx.analytics.v1.AnalyticsSessionBucket",
@@ -166880,7 +166914,7 @@
             {
               "cancellable": false,
               "cli_verb": "",
-              "doc": "Lists the environment's raw events in a time range, newest first.",
+              "doc": "Lists the environment's raw events in a time range, newest first.\n\nUnlike public ingest (`POST /v1/analytics/events:batch`), this route requires\n`service_enablements/analytics` to be enabled on the project.",
               "effect": "read",
               "errors": [
                 "UNAUTHENTICATED",
@@ -166930,7 +166964,7 @@
             {
               "cancellable": false,
               "cli_verb": "",
-              "doc": "Aggregates deduplicated events in the environment over a bounded interval.",
+              "doc": "Aggregates deduplicated events in the environment over a bounded interval.\n\nUnlike public ingest (`POST /v1/analytics/events:batch`), this route requires\n`service_enablements/analytics` to be enabled on the project.",
               "effect": "read",
               "errors": [
                 "UNAUTHENTICATED",

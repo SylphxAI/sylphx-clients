@@ -185,6 +185,18 @@ export interface AnalyticsSessionBucket {
 	 * zero; for an even count the two middle durations are averaged.
 	 */
 	medianDurationMs?: number
+	/**
+	 * Total foreground milliseconds from deduplicated $heartbeat and $session_end
+	 * events in qualifying sessions, attributed to the session's entry bucket.
+	 * Only finite JSON numbers from 0 to 86400000 inclusive in fg_ms count;
+	 * zero if none qualify.
+	 */
+	onlineTimeMs?: number
+	/**
+	 * Online time divided by all qualifying sessions, in milliseconds; zero when
+	 * online time is zero.
+	 */
+	averageOnlineTimeMs?: number
 }
 
 /**
@@ -631,6 +643,8 @@ runtime.registerSchemas({
 		['breakdownValue', 'breakdown_value'],
 		['sessionCount', 'session_count'],
 		['medianDurationMs', 'median_duration_ms'],
+		['onlineTimeMs', 'online_time_ms'],
+		['averageOnlineTimeMs', 'average_online_time_ms'],
 	],
 	'sylphx.analytics.v1.BatchEventsRequest': [
 		['events', 'events', 'sylphx.analytics.v1.EventInput'],
@@ -777,6 +791,9 @@ export class AnalyticsEventsCollection {
 	/**
 	 * Lists the environment's raw events in a time range, newest first.
 	 *
+	 * Unlike public ingest (`POST /v1/analytics/events:batch`), this route requires
+	 * `service_enablements/analytics` to be enabled on the project.
+	 *
 	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/analytics_events` · permission `analytics:read` · effect `read`
 	 *
 	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
@@ -804,6 +821,9 @@ export class AnalyticsEventsCollection {
 
 	/**
 	 * Aggregates deduplicated events in the environment over a bounded interval.
+	 *
+	 * Unlike public ingest (`POST /v1/analytics/events:batch`), this route requires
+	 * `service_enablements/analytics` to be enabled on the project.
 	 *
 	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/analytics_events:query` · permission `analytics:read` · effect `read`
 	 *

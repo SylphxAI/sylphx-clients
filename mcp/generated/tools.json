@@ -6790,7 +6790,7 @@
         "readOnlyHint": true,
         "title": "Lists the environment's raw events in a time range, newest first."
       },
-      "description": "Lists the environment's raw events in a time range, newest first.",
+      "description": "Lists the environment's raw events in a time range, newest first.\n\nUnlike public ingest (`POST /v1/analytics/events:batch`), this route requires\n`service_enablements/analytics` to be enabled on the project.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/analytics_events",
       "input_schema": {
@@ -6849,7 +6849,7 @@
         "readOnlyHint": true,
         "title": "Aggregates deduplicated events in the environment over a bounded interval."
       },
-      "description": "Aggregates deduplicated events in the environment over a bounded interval.",
+      "description": "Aggregates deduplicated events in the environment over a bounded interval.\n\nUnlike public ingest (`POST /v1/analytics/events:batch`), this route requires\n`service_enablements/analytics` to be enabled on the project.",
       "effect": "read",
       "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/analytics_events:query",
       "input_schema": {
@@ -53921,7 +53921,7 @@
         "readOnlyHint": true,
         "title": "Lists the environment's raw events in a time range, newest first."
       },
-      "description": "Lists the environment's raw events in a time range, newest first.",
+      "description": "Lists the environment's raw events in a time range, newest first.\n\nUnlike public ingest (`POST /v1/analytics/events:batch`), this route requires\n`service_enablements/analytics` to be enabled on the project.",
       "inputSchema": {
         "additionalProperties": false,
         "description": "The request of ListAnalyticsEvents.",
@@ -53976,7 +53976,7 @@
         "readOnlyHint": true,
         "title": "Aggregates deduplicated events in the environment over a bounded interval."
       },
-      "description": "Aggregates deduplicated events in the environment over a bounded interval.",
+      "description": "Aggregates deduplicated events in the environment over a bounded interval.\n\nUnlike public ingest (`POST /v1/analytics/events:batch`), this route requires\n`service_enablements/analytics` to be enabled on the project.",
       "inputSchema": {
         "additionalProperties": false,
         "description": "The request of QueryAnalyticsEvents. Select exactly one query mode.",
