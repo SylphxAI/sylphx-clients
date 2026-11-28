@@ -5887,6 +5887,26 @@ pub struct SettledCheckoutItem {
         alias = "amountSubtotalMinor"
     )]
     pub amount_subtotal_minor: Option<i64>,
+    /// The processor's ID for this settled line, when captured.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "processorLineId"
+    )]
+    pub processor_line_id: Option<String>,
+    /// Exact source used for this line's entitlement grants, scoped to this
+    /// checkout. A line with no entitlement features has no grant rows. Absent
+    /// for subscriptions and historical lines without a proven binding.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "grantSource"
+    )]
+    pub grant_source: Option<String>,
 }
 
 /// A shipping address collected by the hosted checkout for a physical order.

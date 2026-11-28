@@ -34498,8 +34498,18 @@
             "readOnly": true,
             "type": "string"
           },
+          "grant_source": {
+            "description": "Exact source used for this line's entitlement grants, scoped to this\ncheckout. A line with no entitlement features has no grant rows. Absent\nfor subscriptions and historical lines without a proven binding.",
+            "readOnly": true,
+            "type": "string"
+          },
           "price_key": {
             "description": "Stable catalog price key.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "processor_line_id": {
+            "description": "The processor's ID for this settled line, when captured.",
             "readOnly": true,
             "type": "string"
           },

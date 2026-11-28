@@ -105226,6 +105226,44 @@
             "kind": "scalar",
             "scalar": "int64"
           }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The processor's ID for this settled line, when captured.",
+          "filterable": false,
+          "name": "processor_line_id",
+          "number": 6,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Exact source used for this line's entitlement grants, scoped to this\ncheckout. A line with no entitlement features has no grant rows. Absent\nfor subscriptions and historical lines without a proven binding.",
+          "filterable": false,
+          "name": "grant_source",
+          "number": 7,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
         }
       ],
       "name": "sylphx.money.v1.SettledCheckoutItem",

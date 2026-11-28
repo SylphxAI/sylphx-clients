@@ -2690,6 +2690,14 @@ export interface SettledCheckoutItem {
 	readonly unitAmountMinor?: string
 	/** Line total after discounts, excluding tax and shipping, in minor units. */
 	readonly amountSubtotalMinor?: string
+	/** The processor's ID for this settled line, when captured. */
+	readonly processorLineId?: string
+	/**
+	 * Exact source used for this line's entitlement grants, scoped to this
+	 * checkout. A line with no entitlement features has no grant rows. Absent
+	 * for subscriptions and historical lines without a proven binding.
+	 */
+	readonly grantSource?: string
 }
 
 /** A shipping address collected by the hosted checkout for a physical order. */
@@ -4281,6 +4289,8 @@ runtime.registerSchemas({
 		['productKey', 'product_key'],
 		['unitAmountMinor', 'unit_amount_minor'],
 		['amountSubtotalMinor', 'amount_subtotal_minor'],
+		['processorLineId', 'processor_line_id'],
+		['grantSource', 'grant_source'],
 	],
 	'sylphx.money.v1.ShippingAddress': [
 		['postalCode', 'postal_code'],
