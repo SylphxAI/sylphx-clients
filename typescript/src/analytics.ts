@@ -191,9 +191,9 @@ export interface AnalyticsRetentionCohort {
 	periodOffsets?: number[]
 }
 
-/** Aggregate for one UTC bucket, event name, and set of dimensions. */
+/** Aggregate for one time bucket, event name, and set of dimensions. */
 export interface AnalyticsRollupBucket {
-	/** The UTC start of the bucket. */
+	/** The start in the reporting time_zone (UTC by default), as a UTC instant. */
 	bucketStart?: string
 	/** The event name. */
 	eventName?: string
@@ -590,7 +590,7 @@ export interface RetentionQuery {
 
 /** A time-bucketed aggregate over deduplicated events. */
 export interface RollupQuery {
-	/** The width of each UTC bucket. */
+	/** The bucket interval in the reporting time_zone (UTC by default). */
 	interval?: RollupInterval
 	/** Up to 16 event names to include. Empty includes all names. */
 	eventNames?: string[]
@@ -663,8 +663,8 @@ export type RetentionInterval = 'day' | 'week' | 'month' | (string & {})
 /** How return events contribute to each reported retention period. */
 export type RetentionMode = 'exact' | 'unbounded' | (string & {})
 
-/** The width of a UTC rollup bucket. */
-export type RollupInterval = 'hour' | 'day' | (string & {})
+/** The width of a rollup bucket in the reporting time_zone (UTC by default). */
+export type RollupInterval = 'hour' | 'day' | 'week' | 'month' | (string & {})
 
 runtime.registerSchemas({
 	'sylphx.analytics.v1.ActiveUsersQuery': [

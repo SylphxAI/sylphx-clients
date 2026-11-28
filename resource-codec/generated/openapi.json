@@ -5876,10 +5876,10 @@
         "type": "object"
       },
       "sylphx.analytics.v1.AnalyticsRollupBucket": {
-        "description": "Aggregate for one UTC bucket, event name, and set of dimensions.",
+        "description": "Aggregate for one time bucket, event name, and set of dimensions.",
         "properties": {
           "bucket_start": {
-            "description": "The UTC start of the bucket.",
+            "description": "The start in the reporting time_zone (UTC by default), as a UTC instant.",
             "format": "date-time",
             "type": "string"
           },
@@ -6546,10 +6546,12 @@
         "type": "object"
       },
       "sylphx.analytics.v1.RollupInterval": {
-        "description": "The width of a UTC rollup bucket.",
+        "description": "The width of a rollup bucket in the reporting time_zone (UTC by default).",
         "enum": [
           "hour",
-          "day"
+          "day",
+          "week",
+          "month"
         ],
         "type": "string"
       },
@@ -6572,7 +6574,7 @@
           },
           "interval": {
             "$ref": "#/components/schemas/sylphx.analytics.v1.RollupInterval",
-            "description": "The width of each UTC bucket."
+            "description": "The bucket interval in the reporting time_zone (UTC by default)."
           },
           "limit": {
             "description": "Maximum buckets returned. Defaults to 100; clamped to 1–500.",

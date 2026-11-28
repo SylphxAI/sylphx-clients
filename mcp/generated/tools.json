@@ -7186,10 +7186,12 @@
                 "type": "array"
               },
               "interval": {
-                "description": "The width of each UTC bucket.",
+                "description": "The bucket interval in the reporting time_zone (UTC by default).",
                 "enum": [
                   "hour",
-                  "day"
+                  "day",
+                  "week",
+                  "month"
                 ],
                 "type": "string"
               },
@@ -54383,10 +54385,12 @@
                 "type": "array"
               },
               "interval": {
-                "description": "The width of each UTC bucket.",
+                "description": "The bucket interval in the reporting time_zone (UTC by default).",
                 "enum": [
                   "hour",
-                  "day"
+                  "day",
+                  "week",
+                  "month"
                 ],
                 "type": "string"
               },

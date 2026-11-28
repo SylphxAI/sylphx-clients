@@ -861,21 +861,33 @@
       ]
     },
     {
-      "doc": "The width of a UTC rollup bucket.",
+      "doc": "The width of a rollup bucket in the reporting time_zone (UTC by default).",
       "name": "sylphx.analytics.v1.RollupInterval",
       "package": "sylphx.analytics.v1",
       "values": [
         {
-          "doc": "One UTC hour.",
+          "doc": "One hour.",
           "number": 1,
           "proto_name": "ROLLUP_INTERVAL_HOUR",
           "wire": "hour"
         },
         {
-          "doc": "One UTC calendar day.",
+          "doc": "One calendar day starting at local midnight.",
           "number": 2,
           "proto_name": "ROLLUP_INTERVAL_DAY",
           "wire": "day"
+        },
+        {
+          "doc": "One ISO week starting Monday at local midnight.",
+          "number": 3,
+          "proto_name": "ROLLUP_INTERVAL_WEEK",
+          "wire": "week"
+        },
+        {
+          "doc": "One calendar month starting on day 1 at local midnight.",
+          "number": 4,
+          "proto_name": "ROLLUP_INTERVAL_MONTH",
+          "wire": "month"
         }
       ]
     },
@@ -23020,12 +23032,12 @@
       "package": "sylphx.analytics.v1"
     },
     {
-      "doc": "Aggregate for one UTC bucket, event name, and set of dimensions.",
+      "doc": "Aggregate for one time bucket, event name, and set of dimensions.",
       "fields": [
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "The UTC start of the bucket.",
+          "doc": "The start in the reporting time_zone (UTC by default), as a UTC instant.",
           "filterable": false,
           "name": "bucket_start",
           "number": 1,
@@ -24967,7 +24979,7 @@
             "REQUIRED"
           ],
           "cli_flag": "",
-          "doc": "The width of each UTC bucket.",
+          "doc": "The bucket interval in the reporting time_zone (UTC by default).",
           "filterable": false,
           "name": "interval",
           "number": 1,

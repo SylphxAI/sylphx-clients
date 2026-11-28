@@ -357,11 +357,11 @@ pub struct AnalyticsRetentionCohort {
     pub period_offsets: Vec<i32>,
 }
 
-/// Aggregate for one UTC bucket, event name, and set of dimensions.
+/// Aggregate for one time bucket, event name, and set of dimensions.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct AnalyticsRollupBucket {
-    /// The UTC start of the bucket.
+    /// The start in the reporting time_zone (UTC by default), as a UTC instant.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -1073,7 +1073,7 @@ pub struct RetentionQuery {
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct RollupQuery {
-    /// The width of each UTC bucket.
+    /// The bucket interval in the reporting time_zone (UTC by default).
     ///
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1582,14 +1582,18 @@ impl crate::runtime::QueryValue for RetentionMode {
     }
 }
 
-/// The width of a UTC rollup bucket.
+/// The width of a rollup bucket in the reporting time_zone (UTC by default).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum RollupInterval {
-    /// One UTC hour.
+    /// One hour.
     Hour,
-    /// One UTC calendar day.
+    /// One calendar day starting at local midnight.
     Day,
+    /// One ISO week starting Monday at local midnight.
+    Week,
+    /// One calendar month starting on day 1 at local midnight.
+    Month,
     /// A value this SDK version does not know.
     Unknown(String),
 }
@@ -1600,6 +1604,8 @@ impl RollupInterval {
         match self {
             Self::Hour => "hour",
             Self::Day => "day",
+            Self::Week => "week",
+            Self::Month => "month",
             Self::Unknown(s) => s.as_str(),
         }
     }
@@ -1609,6 +1615,8 @@ impl RollupInterval {
         match s {
             "hour" => Self::Hour,
             "day" => Self::Day,
+            "week" => Self::Week,
+            "month" => Self::Month,
             other => Self::Unknown(other.to_string()),
         }
     }
