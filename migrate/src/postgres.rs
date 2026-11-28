@@ -232,33 +232,11 @@ pub(super) async fn verify_data_migrate_release(
     expected: &str,
 ) -> Result<bool> {
     lock_writer(db).await?;
-    let mut tx = db
-        .begin_with("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY")
-        .await
-        .map_err(|_| "cannot start migration seal verification")?;
-    let owns_schema: bool = sqlx::query_scalar(
-        "SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_namespace
-            WHERE nspname = '_data_migrate' AND nspowner = current_user::pg_catalog.regrole)",
-    )
-    .fetch_one(&mut *tx)
-    .await
-    .map_err(|_| "cannot verify data-migrate ledger schema ownership")?;
-    if !owns_schema {
-        return Err(
-            "data-migrate requires _data_migrate to be pre-created and owned by the migrator"
-                .into(),
-        );
+    let (_, seal, legacy_exists) =
+        data_migrate::report(db, tree, target, &tree.runtime_roles).await?;
+    if tree.files.is_empty() || seal != expected {
+        return Err("data-migrate plan changed before apply; no writes made".into());
     }
-    let (legacy_exists, report) = checked_history(&mut tx, tree, Some((target, expected))).await?;
-    if !legacy_exists && !report.applied.is_empty() {
-        return Err("legacy migration history must be consolidated into public._sylphx_migrations before takeover".into());
-    }
-    if tree.files.is_empty() {
-        return Err("native migration source is empty".into());
-    }
-    tx.rollback()
-        .await
-        .map_err(|_| "cannot close migration seal verification")?;
     Ok(legacy_exists)
 }
 

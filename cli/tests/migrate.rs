@@ -359,7 +359,7 @@ async fn postgres_migration_proof_data_migrate() {
         &format!("GRANT USAGE, CREATE ON SCHEMA public TO {name}"),
     )
     .await;
-    let mut pg = PgConnection::connect_with(&opts.username(&name).password("fixture-only"))
+    let mut pg = PgConnection::connect_with(&opts.clone().username(&name).password("fixture-only"))
         .await
         .unwrap();
     let target = ReleaseTarget::parse(&format!(
@@ -381,6 +381,11 @@ async fn postgres_migration_proof_data_migrate() {
         baseline.apply(&mut pg).await.unwrap(),
         sylphx_migrate::Apply::Applied(_)
     ));
+    // Apply owns session-level writer locks until the connection closes.
+    drop(pg);
+    let mut pg = PgConnection::connect_with(&opts.clone().username(&name).password("fixture-only"))
+        .await
+        .unwrap();
     let legacy = tree.release_plan(&mut pg, &target).await.unwrap();
     assert_eq!(legacy.pending, std::slice::from_ref(&next));
     assert_eq!(
@@ -407,13 +412,31 @@ async fn postgres_migration_proof_data_migrate() {
         &format!("ALTER SCHEMA _data_migrate OWNER TO {name}"),
     )
     .await;
+    sql(
+        &mut pg,
+        "GRANT SELECT ON public._sylphx_migrations TO PUBLIC",
+    )
+    .await;
+    refused(
+        baseline
+            .release_plan_for_data_migrate(&mut pg, &target, &roles)
+            .await,
+        "PUBLIC privileges",
+    );
+    sql(
+        &mut pg,
+        "REVOKE SELECT ON public._sylphx_migrations FROM PUBLIC",
+    )
+    .await;
     let initial = baseline
         .release_plan_for_data_migrate(&mut pg, &target, &roles)
         .await
         .unwrap();
     assert!(initial.pending.is_empty());
     sql(&mut pg, "CREATE TABLE _data_migrate._data_schema_migrations (version bigint PRIMARY KEY, checksum text NOT NULL, origin text NOT NULL, completed boolean NOT NULL);
-         INSERT INTO _data_migrate._data_schema_migrations SELECT id, sha256, 'sha256_takeover', true FROM public._sylphx_migrations").await;
+         INSERT INTO _data_migrate._data_schema_migrations SELECT id, sha256, 'sha256_takeover', true FROM public._sylphx_migrations;
+         CREATE TABLE _data_migrate.sha256_takeover_evidence (version bigint PRIMARY KEY REFERENCES _data_migrate._data_schema_migrations, source text NOT NULL, destructive_overrides text[] NOT NULL, source_schema text NOT NULL, source_table text NOT NULL, source_oid oid NOT NULL);
+         INSERT INTO _data_migrate.sha256_takeover_evidence SELECT id, source, destructive_overrides, 'public', '_sylphx_migrations', 'public._sylphx_migrations'::regclass FROM public._sylphx_migrations").await;
     let takeover = baseline
         .release_plan_for_data_migrate(&mut pg, &target, &roles)
         .await
@@ -427,15 +450,38 @@ async fn postgres_migration_proof_data_migrate() {
     assert_eq!(plan.pending, std::slice::from_ref(&next));
     let checksum = format!("{:x}", Sha256::digest(next.1.as_bytes()));
     sql(&mut pg, &format!("INSERT INTO _data_migrate._data_schema_migrations VALUES (202611260002, '{checksum}', 'native', true)")).await;
-    assert!(tree
+    let second = tree
         .release_plan_for_data_migrate(&mut pg, &target, &roles)
         .await
-        .unwrap()
-        .pending
-        .is_empty());
+        .unwrap();
+    assert!(second.pending.is_empty());
+    let mut runner = PgConnection::connect_with(&opts.username(&name).password("fixture-only"))
+        .await
+        .unwrap();
+    let error = tree
+        .verify_data_migrate_release(&mut runner, &target, &plan.seal)
+        .await
+        .unwrap_err();
+    assert!(error.contains("plan changed"), "{error}");
+    assert!(tree
+        .verify_data_migrate_release(&mut runner, &target, &second.seal)
+        .await
+        .unwrap());
+    drop(runner);
+    sql(
+        &mut pg,
+        "UPDATE _data_migrate.sha256_takeover_evidence SET source_oid = 0",
+    )
+    .await;
+    refused(
+        tree.release_plan_for_data_migrate(&mut pg, &target, &roles)
+            .await,
+        "takeover evidence does not match",
+    );
+    sql(&mut pg, "UPDATE _data_migrate.sha256_takeover_evidence SET source_oid = 'public._sylphx_migrations'::regclass").await;
     for (stmt, reason) in [
         ("UPDATE _data_migrate._data_schema_migrations SET checksum = repeat('0', 64) WHERE version = 202611260001", "checksum mismatch"),
-        ("DELETE FROM _data_migrate._data_schema_migrations WHERE version = 202611260001", "missing canonical takeover receipt"),
+        ("DELETE FROM _data_migrate.sha256_takeover_evidence; DELETE FROM _data_migrate._data_schema_migrations WHERE version = 202611260001", "missing canonical takeover receipt"),
     ] {
         sql(&mut pg, stmt).await;
         refused(tree.release_plan_for_data_migrate(&mut pg, &target, &roles).await, reason);

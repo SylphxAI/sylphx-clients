@@ -220,17 +220,13 @@ impl SourceTree {
         target: &ReleaseTarget,
         report: &Report<'_>,
         roles: &RuntimeRoles,
-        legacy_exists: bool,
+        legacy_oid: Option<i64>,
         receipts: &std::collections::BTreeMap<i64, String>,
     ) -> Result<String> {
         let seal = self.seal_with_runtime_roles(target, report, roles)?;
-        let bytes = serde_json::to_vec(&(
-            "sylphx-release-data-migrate-v1",
-            seal,
-            legacy_exists,
-            receipts,
-        ))
-        .map_err(|_| "cannot encode data-migrate plan")?;
+        let bytes =
+            serde_json::to_vec(&("sylphx-release-data-migrate-v1", seal, legacy_oid, receipts))
+                .map_err(|_| "cannot encode data-migrate plan")?;
         Ok(format!("{:x}", Sha256::digest(bytes)))
     }
 
@@ -252,7 +248,7 @@ impl SourceTree {
             .collect()
     }
 
-    /// Revalidate the exact legacy seal without writing. The caller must retain
+    /// Revalidate the exact canonical seal without writing. The caller must retain
     /// this dedicated session (and its writer locks) through delegated execution.
     pub async fn verify_data_migrate_release(
         &self,

@@ -184,12 +184,6 @@ async fn postgres_takeover_twice() {
         .await
         .unwrap();
     let target = ReleaseTarget::parse_for_data_migrate(writer_url.as_str()).unwrap();
-    let mut planner = sylphx_migrate::connect(writer_url.as_str()).await.unwrap();
-    // Compute the seal using the same read-only controller planner.
-    let plan = tree.release_plan(&mut planner, &target).await.unwrap();
-    assert!(plan.pending.is_empty());
-    drop(planner);
-
     let invalid = run_verified(
         &"0".repeat(64),
         writer_url.as_str(),
@@ -208,6 +202,17 @@ async fn postgres_takeover_twice() {
     assert!(no_ledger, "invalid seal must not start the child");
 
     for run in 0..2 {
+        let mut planner = sylphx_migrate::connect(writer_url.as_str()).await.unwrap();
+        let plan = tree
+            .release_plan_for_data_migrate(
+                &mut planner,
+                &target,
+                &RuntimeRoles::new([&role]).unwrap(),
+            )
+            .await
+            .unwrap();
+        assert!(plan.pending.is_empty());
+        drop(planner);
         let legacy_before: String = sqlx::query_scalar("SELECT jsonb_agg(jsonb_build_array(to_jsonb(t), xmin::text) ORDER BY id)::text FROM public._sylphx_migrations t").fetch_one(&mut pg).await.unwrap();
         let snapshots = "SELECT (SELECT jsonb_agg(jsonb_build_array(to_jsonb(t), xmin::text) ORDER BY version) FROM _data_migrate._data_schema_migrations t)::text, (SELECT jsonb_agg(jsonb_build_array(to_jsonb(t), xmin::text) ORDER BY version) FROM _data_migrate.sha256_takeover_evidence t)::text";
         let native_before: Option<(String, String)> = if run == 1 {
@@ -248,6 +253,44 @@ async fn postgres_takeover_twice() {
         assert!(output.contains("already_applied=1 pending=0"), "{output}");
         print!("adapter run {}: {output}", run + 1);
     }
+    fs::write(
+        project.path().join("202611260002_second.sql"),
+        "ALTER TABLE public.example ADD COLUMN label text;\n",
+    )
+    .unwrap();
+    let roles = RuntimeRoles::new([&role]).unwrap();
+    let next = SourceTree::load(project.path(), Some(&baseline)).unwrap();
+    let mut planner = sylphx_migrate::connect(writer_url.as_str()).await.unwrap();
+    let plan = next
+        .release_plan_for_data_migrate(&mut planner, &target, &roles)
+        .await
+        .unwrap();
+    assert_eq!(
+        plan.pending
+            .iter()
+            .map(|(name, _)| name.as_str())
+            .collect::<Vec<_>>(),
+        ["202611260002_second.sql"]
+    );
+    run_verified(
+        &plan.seal,
+        writer_url.as_str(),
+        project.path(),
+        Some(&baseline),
+        RuntimeRoles::new([&role]).unwrap(),
+        &binary,
+    )
+    .await
+    .unwrap();
+    assert!(next
+        .release_plan_for_data_migrate(&mut planner, &target, &roles)
+        .await
+        .unwrap()
+        .pending
+        .is_empty());
+    let written: (i64, i64) = sqlx::query_as("SELECT (SELECT count(*) FROM public._sylphx_migrations), (SELECT count(*) FROM _data_migrate._data_schema_migrations)").fetch_one(&mut pg).await.unwrap();
+    assert_eq!(written, (1, 2));
+    drop(planner);
     drop(pg);
     admin_db
         .execute(format!("DROP DATABASE {db}").as_str())
