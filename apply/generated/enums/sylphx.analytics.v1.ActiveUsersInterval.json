@@ -26,6 +26,11 @@
       "number": 5,
       "proto_name": "ACTIVE_USERS_INTERVAL_TRAILING_30_DAYS",
       "wire": "trailing_30_days"
+    },
+    {
+      "number": 6,
+      "proto_name": "ACTIVE_USERS_INTERVAL_STICKINESS",
+      "wire": "stickiness"
     }
   ]
 }

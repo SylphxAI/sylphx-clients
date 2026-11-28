@@ -8,14 +8,16 @@ import type * as common from './common.js'
 /**
  * Exact distinct active subjects in the reporting time zone (UTC by default).
  * Only events inside [start_time, end_time) contribute.
- * Trailing buckets start at reporting-day midnight and can include quiet
- * days, but omit days with zero active subjects.
+ * Trailing and stickiness buckets start at reporting-day midnight and can
+ * include quiet days when the trailing window contains activity.
  */
 export interface ActiveUsersQuery {
 	/**
 	 * Calendar `day`, Monday-start `week`, or calendar `month`;
 	 * `trailing_7_days` and `trailing_30_days` count distinct subjects across
 	 * the 7 or 30 reporting days ending on each day (inclusive).
+	 * `stickiness` reports daily distinct subjects, trailing 30-day distinct
+	 * subjects, and their ratio as a percentage.
 	 */
 	interval?: ActiveUsersInterval
 	/**
@@ -45,8 +47,21 @@ export interface AnalyticsActiveUsersBucket {
 	 * Exact count of distinct stored subject IDs. When a person has both an
 	 * anonymous and an identified subject ID on the day they sign in, they
 	 * count as two active subjects in that day; this query does not stitch IDs.
+	 * For `stickiness` this is DAU, with implicit zero on the wire for quiet
+	 * days. All other intervals omit zero-count buckets.
 	 */
 	activeUsers?: string
+	/**
+	 * Exact distinct stored subjects in the 30 reporting days ending on
+	 * bucket_start (inclusive), clipped to [start_time, end_time).
+	 * Present only for `stickiness`.
+	 */
+	trailing30DayActiveUsers?: string
+	/**
+	 * DAU * 100 / trailing_30_day_active_users, in 0–100.
+	 * Present only for `stickiness`.
+	 */
+	stickinessPct?: number
 }
 
 /**
@@ -625,7 +640,7 @@ export interface SessionsQuery {
 }
 
 /** The active-user window in the reporting time zone. */
-export type ActiveUsersInterval = 'day' | 'week' | 'month' | 'trailing_7_days' | 'trailing_30_days' | (string & {})
+export type ActiveUsersInterval = 'day' | 'week' | 'month' | 'trailing_7_days' | 'trailing_30_days' | 'stickiness' | (string & {})
 
 /** The app's analytics consent, as sent with a batch. */
 export type AnalyticsConsent = 'granted' | 'denied' | (string & {})
@@ -661,6 +676,8 @@ runtime.registerSchemas({
 		['bucketStart', 'bucket_start'],
 		['breakdownValue', 'breakdown_value'],
 		['activeUsers', 'active_users'],
+		['trailing30DayActiveUsers', 'trailing_30_day_active_users'],
+		['stickinessPct', 'stickiness_pct'],
 	],
 	'sylphx.analytics.v1.AnalyticsEvent': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],

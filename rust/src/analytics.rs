@@ -5,14 +5,16 @@
 
 /// Exact distinct active subjects in the reporting time zone (UTC by default).
 /// Only events inside [start_time, end_time) contribute.
-/// Trailing buckets start at reporting-day midnight and can include quiet
-/// days, but omit days with zero active subjects.
+/// Trailing and stickiness buckets start at reporting-day midnight and can
+/// include quiet days when the trailing window contains activity.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct ActiveUsersQuery {
     /// Calendar `day`, Monday-start `week`, or calendar `month`;
     /// `trailing_7_days` and `trailing_30_days` count distinct subjects across
     /// the 7 or 30 reporting days ending on each day (inclusive).
+    /// `stickiness` reports daily distinct subjects, trailing 30-day distinct
+    /// subjects, and their ratio as a percentage.
     ///
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -63,6 +65,8 @@ pub struct AnalyticsActiveUsersBucket {
     /// Exact count of distinct stored subject IDs. When a person has both an
     /// anonymous and an identified subject ID on the day they sign in, they
     /// count as two active subjects in that day; this query does not stitch IDs.
+    /// For `stickiness` this is DAU, with implicit zero on the wire for quiet
+    /// days. All other intervals omit zero-count buckets.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -70,6 +74,24 @@ pub struct AnalyticsActiveUsersBucket {
         alias = "activeUsers"
     )]
     pub active_users: i64,
+    /// Exact distinct stored subjects in the 30 reporting days ending on
+    /// bucket_start (inclusive), clipped to [start_time, end_time).
+    /// Present only for `stickiness`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "crate::runtime::opt_int64",
+        alias = "trailing30DayActiveUsers"
+    )]
+    pub trailing_30_day_active_users: Option<i64>,
+    /// DAU * 100 / trailing_30_day_active_users, in 0–100.
+    /// Present only for `stickiness`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "stickinessPct"
+    )]
+    pub stickiness_pct: Option<f64>,
 }
 
 /// An Analytics Event is one immutable thing a person or a game did, recorded by
@@ -1137,6 +1159,10 @@ pub enum ActiveUsersInterval {
     /// One bucket per reporting day, counting that day and the preceding 29 days,
     /// clipped to the requested time range.
     Trailing30Days,
+    /// One bucket per reporting day with trailing 30-day activity. Reports
+    /// daily and trailing 30-day distinct subjects and DAU as a percentage of
+    /// trailing activity, all clipped to [start_time, end_time).
+    Stickiness,
     /// A value this SDK version does not know.
     Unknown(String),
 }
@@ -1150,6 +1176,7 @@ impl ActiveUsersInterval {
             Self::Month => "month",
             Self::Trailing7Days => "trailing_7_days",
             Self::Trailing30Days => "trailing_30_days",
+            Self::Stickiness => "stickiness",
             Self::Unknown(s) => s.as_str(),
         }
     }
@@ -1162,6 +1189,7 @@ impl ActiveUsersInterval {
             "month" => Self::Month,
             "trailing_7_days" => Self::Trailing7Days,
             "trailing_30_days" => Self::Trailing30Days,
+            "stickiness" => Self::Stickiness,
             other => Self::Unknown(other.to_string()),
         }
     }

@@ -47,6 +47,42 @@
         "kind": "scalar",
         "scalar": "int64"
       }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "trailing_30_day_active_users",
+      "number": 4,
+      "oneof": null,
+      "optional": true,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "int64"
+      }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "stickiness_pct",
+      "number": 5,
+      "oneof": null,
+      "optional": true,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "double"
+      }
     }
   ],
   "name": "sylphx.analytics.v1.AnalyticsActiveUsersBucket",

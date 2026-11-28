@@ -5620,12 +5620,13 @@
           "week",
           "month",
           "trailing_7_days",
-          "trailing_30_days"
+          "trailing_30_days",
+          "stickiness"
         ],
         "type": "string"
       },
       "sylphx.analytics.v1.ActiveUsersQuery": {
-        "description": "Exact distinct active subjects in the reporting time zone (UTC by default).\nOnly events inside [start_time, end_time) contribute.\nTrailing buckets start at reporting-day midnight and can include quiet\ndays, but omit days with zero active subjects.",
+        "description": "Exact distinct active subjects in the reporting time zone (UTC by default).\nOnly events inside [start_time, end_time) contribute.\nTrailing and stickiness buckets start at reporting-day midnight and can\ninclude quiet days when the trailing window contains activity.",
         "properties": {
           "breakdown_property": {
             "description": "Top-level string property per qualifying event. Omit for unsegmented\nbuckets. A dot is literal, not a path. Missing or non-string values\ngroup with the empty string. A subject may contribute to multiple groups.",
@@ -5640,7 +5641,7 @@
           },
           "interval": {
             "$ref": "#/components/schemas/sylphx.analytics.v1.ActiveUsersInterval",
-            "description": "Calendar `day`, Monday-start `week`, or calendar `month`;\n`trailing_7_days` and `trailing_30_days` count distinct subjects across\nthe 7 or 30 reporting days ending on each day (inclusive)."
+            "description": "Calendar `day`, Monday-start `week`, or calendar `month`;\n`trailing_7_days` and `trailing_30_days` count distinct subjects across\nthe 7 or 30 reporting days ending on each day (inclusive).\n`stickiness` reports daily distinct subjects, trailing 30-day distinct\nsubjects, and their ratio as a percentage."
           },
           "limit": {
             "description": "Maximum bucket rows returned. Defaults to 100; clamped to 1–500.",
@@ -5664,7 +5665,7 @@
         "description": "Active users for one bucket and breakdown value.",
         "properties": {
           "active_users": {
-            "description": "Exact count of distinct stored subject IDs. When a person has both an\nanonymous and an identified subject ID on the day they sign in, they\ncount as two active subjects in that day; this query does not stitch IDs.",
+            "description": "Exact count of distinct stored subject IDs. When a person has both an\nanonymous and an identified subject ID on the day they sign in, they\ncount as two active subjects in that day; this query does not stitch IDs.\nFor `stickiness` this is DAU, with implicit zero on the wire for quiet\ndays. All other intervals omit zero-count buckets.",
             "format": "int64",
             "type": "string"
           },
@@ -5675,6 +5676,15 @@
           "bucket_start": {
             "description": "The calendar bucket start as a UTC instant, which may precede start_time.",
             "format": "date-time",
+            "type": "string"
+          },
+          "stickiness_pct": {
+            "description": "DAU * 100 / trailing_30_day_active_users, in 0–100.\nPresent only for `stickiness`.",
+            "type": "number"
+          },
+          "trailing_30_day_active_users": {
+            "description": "Exact distinct stored subjects in the 30 reporting days ending on\nbucket_start (inclusive), clipped to [start_time, end_time).\nPresent only for `stickiness`.",
+            "format": "int64",
             "type": "string"
           }
         },

@@ -6886,13 +6886,14 @@
                 "type": "array"
               },
               "interval": {
-                "description": "Calendar `day`, Monday-start `week`, or calendar `month`;\n`trailing_7_days` and `trailing_30_days` count distinct subjects across\nthe 7 or 30 reporting days ending on each day (inclusive).",
+                "description": "Calendar `day`, Monday-start `week`, or calendar `month`;\n`trailing_7_days` and `trailing_30_days` count distinct subjects across\nthe 7 or 30 reporting days ending on each day (inclusive).\n`stickiness` reports daily distinct subjects, trailing 30-day distinct\nsubjects, and their ratio as a percentage.",
                 "enum": [
                   "day",
                   "week",
                   "month",
                   "trailing_7_days",
-                  "trailing_30_days"
+                  "trailing_30_days",
+                  "stickiness"
                 ],
                 "type": "string"
               },
@@ -54082,13 +54083,14 @@
                 "type": "array"
               },
               "interval": {
-                "description": "Calendar `day`, Monday-start `week`, or calendar `month`;\n`trailing_7_days` and `trailing_30_days` count distinct subjects across\nthe 7 or 30 reporting days ending on each day (inclusive).",
+                "description": "Calendar `day`, Monday-start `week`, or calendar `month`;\n`trailing_7_days` and `trailing_30_days` count distinct subjects across\nthe 7 or 30 reporting days ending on each day (inclusive).\n`stickiness` reports daily distinct subjects, trailing 30-day distinct\nsubjects, and their ratio as a percentage.",
                 "enum": [
                   "day",
                   "week",
                   "month",
                   "trailing_7_days",
-                  "trailing_30_days"
+                  "trailing_30_days",
+                  "stickiness"
                 ],
                 "type": "string"
               },

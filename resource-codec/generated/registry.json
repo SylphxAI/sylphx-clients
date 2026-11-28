@@ -706,6 +706,12 @@
           "number": 5,
           "proto_name": "ACTIVE_USERS_INTERVAL_TRAILING_30_DAYS",
           "wire": "trailing_30_days"
+        },
+        {
+          "doc": "One bucket per reporting day with trailing 30-day activity. Reports\ndaily and trailing 30-day distinct subjects and DAU as a percentage of\ntrailing activity, all clipped to [start_time, end_time).",
+          "number": 6,
+          "proto_name": "ACTIVE_USERS_INTERVAL_STICKINESS",
+          "wire": "stickiness"
         }
       ]
     },
@@ -22250,14 +22256,14 @@
       "package": "sylphx.ai.v1"
     },
     {
-      "doc": "Exact distinct active subjects in the reporting time zone (UTC by default).\nOnly events inside [start_time, end_time) contribute.\nTrailing buckets start at reporting-day midnight and can include quiet\ndays, but omit days with zero active subjects.",
+      "doc": "Exact distinct active subjects in the reporting time zone (UTC by default).\nOnly events inside [start_time, end_time) contribute.\nTrailing and stickiness buckets start at reporting-day midnight and can\ninclude quiet days when the trailing window contains activity.",
       "fields": [
         {
           "behaviors": [
             "REQUIRED"
           ],
           "cli_flag": "",
-          "doc": "Calendar `day`, Monday-start `week`, or calendar `month`;\n`trailing_7_days` and `trailing_30_days` count distinct subjects across\nthe 7 or 30 reporting days ending on each day (inclusive).",
+          "doc": "Calendar `day`, Monday-start `week`, or calendar `month`;\n`trailing_7_days` and `trailing_30_days` count distinct subjects across\nthe 7 or 30 reporting days ending on each day (inclusive).\n`stickiness` reports daily distinct subjects, trailing 30-day distinct\nsubjects, and their ratio as a percentage.",
           "filterable": false,
           "name": "interval",
           "number": 1,
@@ -22394,7 +22400,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "Exact count of distinct stored subject IDs. When a person has both an\nanonymous and an identified subject ID on the day they sign in, they\ncount as two active subjects in that day; this query does not stitch IDs.",
+          "doc": "Exact count of distinct stored subject IDs. When a person has both an\nanonymous and an identified subject ID on the day they sign in, they\ncount as two active subjects in that day; this query does not stitch IDs.\nFor `stickiness` this is DAU, with implicit zero on the wire for quiet\ndays. All other intervals omit zero-count buckets.",
           "filterable": false,
           "name": "active_users",
           "number": 3,
@@ -22406,6 +22412,44 @@
           "type": {
             "kind": "scalar",
             "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Exact distinct stored subjects in the 30 reporting days ending on\nbucket_start (inclusive), clipped to [start_time, end_time).\nPresent only for `stickiness`.",
+          "filterable": false,
+          "name": "trailing_30_day_active_users",
+          "number": 4,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "DAU * 100 / trailing_30_day_active_users, in 0–100.\nPresent only for `stickiness`.",
+          "filterable": false,
+          "name": "stickiness_pct",
+          "number": 5,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "double"
           }
         }
       ],
