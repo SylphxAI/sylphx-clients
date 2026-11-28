@@ -5796,8 +5796,12 @@
         "type": "object"
       },
       "sylphx.analytics.v1.AnalyticsPath": {
-        "description": "One event sequence across sessions.",
+        "description": "One event sequence across sessions for one breakdown value.",
         "properties": {
+          "breakdown_value": {
+            "description": "Anchor-event breakdown value; empty when unsegmented, missing, or non-string.",
+            "type": "string"
+          },
           "session_count": {
             "description": "Exact count of sessions producing these steps.",
             "format": "int64",
@@ -6247,6 +6251,10 @@
       "sylphx.analytics.v1.PathsQuery": {
         "description": "Session paths inside the query interval. Set exactly one anchor.",
         "properties": {
+          "breakdown_property": {
+            "description": "Top-level string property of the first qualifying anchor in each session.\nOmit for unsegmented paths. A dot is literal, not a path. Missing and\nnon-string values group with the empty string.",
+            "type": "string"
+          },
           "end_event": {
             "description": "End at the first qualifying occurrence of this event in each session.",
             "type": "string"
@@ -6353,7 +6361,7 @@
             "type": "array"
           },
           "paths": {
-            "description": "Nonempty paths ranked by session count, then subject count (both descending),\nthen lexicographically by steps.",
+            "description": "Nonempty paths ranked by session count, then subject count (both descending),\nthen by breakdown value and step sequence (both ascending).",
             "items": {
               "$ref": "#/components/schemas/sylphx.analytics.v1.AnalyticsPath"
             },

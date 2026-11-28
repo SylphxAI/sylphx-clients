@@ -7004,6 +7004,10 @@
             "additionalProperties": false,
             "description": "Ranked event sequences before or after an anchor in each session.",
             "properties": {
+              "breakdown_property": {
+                "description": "Top-level string property of the first qualifying anchor in each session.\nOmit for unsegmented paths. A dot is literal, not a path. Missing and\nnon-string values group with the empty string.",
+                "type": "string"
+              },
               "end_event": {
                 "description": "End at the first qualifying occurrence of this event in each session.",
                 "type": "string"
@@ -54140,6 +54144,10 @@
             "additionalProperties": false,
             "description": "Ranked event sequences before or after an anchor in each session.",
             "properties": {
+              "breakdown_property": {
+                "description": "Top-level string property of the first qualifying anchor in each session.\nOmit for unsegmented paths. A dot is literal, not a path. Missing and\nnon-string values group with the empty string.",
+                "type": "string"
+              },
               "end_event": {
                 "description": "End at the first qualifying occurrence of this event in each session.",
                 "type": "string"

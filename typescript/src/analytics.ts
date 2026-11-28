@@ -133,7 +133,7 @@ export interface AnalyticsFunnelStep {
 	medianTimeFromPreviousMs?: number
 }
 
-/** One event sequence across sessions. */
+/** One event sequence across sessions for one breakdown value. */
 export interface AnalyticsPath {
 	/** Event names in chronological order, starting or ending at the anchor. */
 	steps?: string[]
@@ -141,6 +141,8 @@ export interface AnalyticsPath {
 	sessionCount?: string
 	/** Exact count of distinct stored subjects on the qualifying anchors. */
 	subjectCount?: string
+	/** Anchor-event breakdown value; empty when unsegmented, missing, or non-string. */
+	breakdownValue?: string
 }
 
 /** Aggregate for one UTC cohort start and breakdown value. */
@@ -418,6 +420,12 @@ export interface PathsQuery {
 	maxSteps?: number
 	/** Maximum paths returned. Defaults to 20; clamped to 1–50. */
 	limit?: number
+	/**
+	 * Top-level string property of the first qualifying anchor in each session.
+	 * Omit for unsegmented paths. A dot is literal, not a path. Missing and
+	 * non-string values group with the empty string.
+	 */
+	breakdownProperty?: string
 }
 
 /** The request of QueryAnalyticsEvents. Select exactly one query mode. */
@@ -473,7 +481,7 @@ export interface QueryAnalyticsEventsResponse {
 	sessionBuckets?: AnalyticsSessionBucket[]
 	/**
 	 * Nonempty paths ranked by session count, then subject count (both descending),
-	 * then lexicographically by steps.
+	 * then by breakdown value and step sequence (both ascending).
 	 */
 	paths?: AnalyticsPath[]
 }
@@ -636,6 +644,7 @@ runtime.registerSchemas({
 	'sylphx.analytics.v1.AnalyticsPath': [
 		['sessionCount', 'session_count'],
 		['subjectCount', 'subject_count'],
+		['breakdownValue', 'breakdown_value'],
 	],
 	'sylphx.analytics.v1.AnalyticsRetentionCohort': [
 		['cohortStart', 'cohort_start'],
@@ -716,6 +725,7 @@ runtime.registerSchemas({
 		['eventNames', 'event_names'],
 		['propertyFilters', 'property_filters', undefined, 'map'],
 		['maxSteps', 'max_steps'],
+		['breakdownProperty', 'breakdown_property'],
 	],
 	'sylphx.analytics.v1.QueryAnalyticsEventsRequest': [
 		['startTime', 'start_time'],

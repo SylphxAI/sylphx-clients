@@ -246,7 +246,7 @@ pub struct AnalyticsFunnelStep {
     pub median_time_from_previous_ms: Option<f64>,
 }
 
-/// One event sequence across sessions.
+/// One event sequence across sessions for one breakdown value.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct AnalyticsPath {
@@ -269,6 +269,13 @@ pub struct AnalyticsPath {
         alias = "subjectCount"
     )]
     pub subject_count: i64,
+    /// Anchor-event breakdown value; empty when unsegmented, missing, or non-string.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "breakdownValue"
+    )]
+    pub breakdown_value: String,
 }
 
 /// Aggregate for one UTC cohort start and breakdown value.
@@ -792,6 +799,15 @@ pub struct PathsQuery {
     /// Maximum paths returned. Defaults to 20; clamped to 1–50.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub limit: Option<i32>,
+    /// Top-level string property of the first qualifying anchor in each session.
+    /// Omit for unsegmented paths. A dot is literal, not a path. Missing and
+    /// non-string values group with the empty string.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "breakdownProperty"
+    )]
+    pub breakdown_property: Option<String>,
 }
 
 /// The request of QueryAnalyticsEvents. Select exactly one query mode.
@@ -891,7 +907,7 @@ pub struct QueryAnalyticsEventsResponse {
     )]
     pub session_buckets: Vec<AnalyticsSessionBucket>,
     /// Nonempty paths ranked by session count, then subject count (both descending),
-    /// then lexicographically by steps.
+    /// then by breakdown value and step sequence (both ascending).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub paths: Vec<AnalyticsPath>,
 }

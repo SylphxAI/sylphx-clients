@@ -22766,7 +22766,7 @@
       "package": "sylphx.analytics.v1"
     },
     {
-      "doc": "One event sequence across sessions.",
+      "doc": "One event sequence across sessions for one breakdown value.",
       "fields": [
         {
           "behaviors": [],
@@ -22817,6 +22817,23 @@
           "type": {
             "kind": "scalar",
             "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Anchor-event breakdown value; empty when unsegmented, missing, or non-string.",
+          "filterable": false,
+          "name": "breakdown_value",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
           }
         }
       ],
@@ -24170,6 +24187,25 @@
             "kind": "scalar",
             "scalar": "int32"
           }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Top-level string property of the first qualifying anchor in each session.\nOmit for unsegmented paths. A dot is literal, not a path. Missing and\nnon-string values group with the empty string.",
+          "filterable": false,
+          "name": "breakdown_property",
+          "number": 7,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
         }
       ],
       "name": "sylphx.analytics.v1.PathsQuery",
@@ -24463,7 +24499,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "Nonempty paths ranked by session count, then subject count (both descending),\nthen lexicographically by steps.",
+          "doc": "Nonempty paths ranked by session count, then subject count (both descending),\nthen by breakdown value and step sequence (both ascending).",
           "filterable": false,
           "name": "paths",
           "number": 6,
