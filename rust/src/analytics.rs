@@ -306,10 +306,10 @@ pub struct AnalyticsRetentionCohort {
     )]
     pub cohort_size: i64,
     /// Distinct subjects retained in each period according to the selected mode.
-    /// Returns must be at or after cohort entry and before the exclusive end. Index 0
-    /// is the entry period. It can be below cohort_size if the return criterion
-    /// excludes cohort entry and some subjects have no qualifying return in the
-    /// periods counted by the selected mode. The array length is periods + 1.
+    /// Positions correspond to period_offsets when present, or offsets 0 through
+    /// periods otherwise. Returns must be at or after entry and before the
+    /// exclusive end. Even at offset 0, the count can be below cohort_size if
+    /// some subjects have no qualifying return.
     #[serde(
         default,
         skip_serializing_if = "Vec::is_empty",
@@ -317,14 +317,22 @@ pub struct AnalyticsRetentionCohort {
         alias = "retainedSubjects"
     )]
     pub retained_subjects: Vec<i64>,
-    /// Percentage of the cohort retained in each period (0–100), or zero when
-    /// cohort_size is zero. The array length is periods + 1.
+    /// Percentage of the cohort retained (0–100), or zero when cohort_size is
+    /// zero. Positions match retained_subjects.
     #[serde(
         default,
         skip_serializing_if = "Vec::is_empty",
         alias = "retentionPcts"
     )]
     pub retention_pcts: Vec<f64>,
+    /// The evaluated custom offset for each position in retained_subjects and
+    /// retention_pcts. Empty for consecutive queries using periods.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "periodOffsets"
+    )]
+    pub period_offsets: Vec<i32>,
 }
 
 /// Aggregate for one UTC bucket, event name, and set of dimensions.
@@ -986,7 +994,8 @@ pub struct RetentionQuery {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub interval: Option<RetentionInterval>,
-    /// Number of periods after period 0. Defaults to 7; clamped to 1–30.
+    /// Report consecutive offsets from 0 through periods (default 7, clamped
+    /// to 1–30). Mutually exclusive with a nonempty period_offsets list.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub periods: Option<i32>,
     /// A top-level key matching ^[A-Za-z_][A-Za-z0-9_.]{0,63}$. Its string value
@@ -1027,6 +1036,15 @@ pub struct RetentionQuery {
         alias = "returnAnyEvent"
     )]
     pub return_any_event: Option<bool>,
+    /// Strictly increasing offsets to report, e.g. [1, 7, 14, 30]. Offset 0
+    /// is the entry period and need not be included. Mutually exclusive with
+    /// periods. An empty list uses the consecutive offsets from 0 through periods.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "periodOffsets"
+    )]
+    pub period_offsets: Vec<i32>,
 }
 
 /// A time-bucketed aggregate over deduplicated events.

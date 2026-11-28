@@ -79,6 +79,22 @@
         "kind": "scalar",
         "scalar": "double"
       }
+    },
+    {
+      "behaviors": [],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "period_offsets",
+      "number": 6,
+      "oneof": null,
+      "optional": false,
+      "repeated": true,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "int32"
+      }
     }
   ],
   "name": "sylphx.analytics.v1.AnalyticsRetentionCohort",

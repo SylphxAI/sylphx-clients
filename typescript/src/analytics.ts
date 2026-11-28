@@ -158,17 +158,22 @@ export interface AnalyticsRetentionCohort {
 	cohortSize?: string
 	/**
 	 * Distinct subjects retained in each period according to the selected mode.
-	 * Returns must be at or after cohort entry and before the exclusive end. Index 0
-	 * is the entry period. It can be below cohort_size if the return criterion
-	 * excludes cohort entry and some subjects have no qualifying return in the
-	 * periods counted by the selected mode. The array length is periods + 1.
+	 * Positions correspond to period_offsets when present, or offsets 0 through
+	 * periods otherwise. Returns must be at or after entry and before the
+	 * exclusive end. Even at offset 0, the count can be below cohort_size if
+	 * some subjects have no qualifying return.
 	 */
 	retainedSubjects?: string[]
 	/**
-	 * Percentage of the cohort retained in each period (0–100), or zero when
-	 * cohort_size is zero. The array length is periods + 1.
+	 * Percentage of the cohort retained (0–100), or zero when cohort_size is
+	 * zero. Positions match retained_subjects.
 	 */
 	retentionPcts?: number[]
+	/**
+	 * The evaluated custom offset for each position in retained_subjects and
+	 * retention_pcts. Empty for consecutive queries using periods.
+	 */
+	periodOffsets?: number[]
 }
 
 /** Aggregate for one UTC bucket, event name, and set of dimensions. */
@@ -525,7 +530,10 @@ export interface RetentionQuery {
 	returnEvent?: string
 	/** The reporting calendar unit for both cohort entry and return periods. */
 	interval?: RetentionInterval
-	/** Number of periods after period 0. Defaults to 7; clamped to 1–30. */
+	/**
+	 * Report consecutive offsets from 0 through periods (default 7, clamped
+	 * to 1–30). Mutually exclusive with a nonempty period_offsets list.
+	 */
 	periods?: number
 	/**
 	 * A top-level key matching ^[A-Za-z_][A-Za-z0-9_.]{0,63}$. Its string value
@@ -557,6 +565,12 @@ export interface RetentionQuery {
 	 * nonempty return_events. False is equivalent to omission.
 	 */
 	returnAnyEvent?: boolean
+	/**
+	 * Strictly increasing offsets to report, e.g. [1, 7, 14, 30]. Offset 0
+	 * is the entry period and need not be included. Mutually exclusive with
+	 * periods. An empty list uses the consecutive offsets from 0 through periods.
+	 */
+	periodOffsets?: number[]
 }
 
 /** A time-bucketed aggregate over deduplicated events. */
@@ -679,6 +693,7 @@ runtime.registerSchemas({
 		['cohortSize', 'cohort_size'],
 		['retainedSubjects', 'retained_subjects'],
 		['retentionPcts', 'retention_pcts'],
+		['periodOffsets', 'period_offsets'],
 	],
 	'sylphx.analytics.v1.AnalyticsRollupBucket': [
 		['bucketStart', 'bucket_start'],
@@ -787,6 +802,7 @@ runtime.registerSchemas({
 		['propertyFilters', 'property_filters', undefined, 'map'],
 		['returnEvents', 'return_events'],
 		['returnAnyEvent', 'return_any_event'],
+		['periodOffsets', 'period_offsets'],
 	],
 	'sylphx.analytics.v1.RollupQuery': [
 		['eventNames', 'event_names'],

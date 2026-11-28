@@ -7124,8 +7124,16 @@
                 ],
                 "type": "string"
               },
+              "period_offsets": {
+                "description": "Strictly increasing offsets to report, e.g. [1, 7, 14, 30]. Offset 0\nis the entry period and need not be included. Mutually exclusive with\nperiods. An empty list uses the consecutive offsets from 0 through periods.",
+                "items": {
+                  "format": "int32",
+                  "type": "integer"
+                },
+                "type": "array"
+              },
               "periods": {
-                "description": "Number of periods after period 0. Defaults to 7; clamped to 1–30.",
+                "description": "Report consecutive offsets from 0 through periods (default 7, clamped\nto 1–30). Mutually exclusive with a nonempty period_offsets list.",
                 "format": "int32",
                 "type": "integer"
               },
@@ -54312,8 +54320,16 @@
                 ],
                 "type": "string"
               },
+              "period_offsets": {
+                "description": "Strictly increasing offsets to report, e.g. [1, 7, 14, 30]. Offset 0\nis the entry period and need not be included. Mutually exclusive with\nperiods. An empty list uses the consecutive offsets from 0 through periods.",
+                "items": {
+                  "format": "int32",
+                  "type": "integer"
+                },
+                "type": "array"
+              },
               "periods": {
-                "description": "Number of periods after period 0. Defaults to 7; clamped to 1–30.",
+                "description": "Report consecutive offsets from 0 through periods (default 7, clamped\nto 1–30). Mutually exclusive with a nonempty period_offsets list.",
                 "format": "int32",
                 "type": "integer"
               },
