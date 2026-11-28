@@ -11,6 +11,11 @@
       "number": 2,
       "proto_name": "RETENTION_INTERVAL_WEEK",
       "wire": "week"
+    },
+    {
+      "number": 3,
+      "proto_name": "RETENTION_INTERVAL_MONTH",
+      "wire": "month"
     }
   ]
 }

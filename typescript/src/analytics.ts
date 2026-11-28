@@ -510,8 +510,9 @@ export interface QueryAnalyticsEventsResponse {
 }
 
 /**
- * Subject retention by reporting calendar period. A subject enters at their
- * first qualifying cohort event in the query interval.
+ * Subject retention by calendar day, week, or month in the reporting time
+ * zone. A subject enters at their first qualifying cohort event in the query
+ * interval.
  */
 export interface RetentionQuery {
 	/** The event that qualifies a subject for a cohort. */
@@ -627,8 +628,8 @@ export type FunnelCountBy = 'subject' | 'session' | (string & {})
 /** How configured funnel steps contribute to conversion depth. */
 export type FunnelOrder = 'ordered' | 'any_order' | (string & {})
 
-/** The width of a UTC retention period. */
-export type RetentionInterval = 'day' | 'week' | (string & {})
+/** The retention period in the reporting time zone (UTC by default). */
+export type RetentionInterval = 'day' | 'week' | 'month' | (string & {})
 
 /** How return events contribute to each reported retention period. */
 export type RetentionMode = 'exact' | 'unbounded' | (string & {})

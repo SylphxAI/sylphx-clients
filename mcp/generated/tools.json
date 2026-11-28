@@ -7106,7 +7106,8 @@
                 "description": "The reporting calendar unit for both cohort entry and return periods.",
                 "enum": [
                   "day",
-                  "week"
+                  "week",
+                  "month"
                 ],
                 "type": "string"
               },
@@ -54293,7 +54294,8 @@
                 "description": "The reporting calendar unit for both cohort entry and return periods.",
                 "enum": [
                   "day",
-                  "week"
+                  "week",
+                  "month"
                 ],
                 "type": "string"
               },

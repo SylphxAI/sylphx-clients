@@ -6445,10 +6445,11 @@
         "type": "object"
       },
       "sylphx.analytics.v1.RetentionInterval": {
-        "description": "The width of a UTC retention period.",
+        "description": "The retention period in the reporting time zone (UTC by default).",
         "enum": [
           "day",
-          "week"
+          "week",
+          "month"
         ],
         "type": "string"
       },
@@ -6461,7 +6462,7 @@
         "type": "string"
       },
       "sylphx.analytics.v1.RetentionQuery": {
-        "description": "Subject retention by reporting calendar period. A subject enters at their\nfirst qualifying cohort event in the query interval.",
+        "description": "Subject retention by calendar day, week, or month in the reporting time\nzone. A subject enters at their first qualifying cohort event in the query\ninterval.",
         "properties": {
           "breakdown_property": {
             "description": "A top-level key matching ^[A-Za-z_][A-Za-z0-9_.]{0,63}$. Its string value\ncomes from the first qualifying cohort event, never from a return event.\nOmit for unsegmented cohorts. Missing and non-string values are grouped\nwith the empty string. A dot in a key is literal, not a path.",

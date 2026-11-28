@@ -957,8 +957,9 @@ pub struct QueryAnalyticsEventsResponse {
     pub paths: Vec<AnalyticsPath>,
 }
 
-/// Subject retention by reporting calendar period. A subject enters at their
-/// first qualifying cohort event in the query interval.
+/// Subject retention by calendar day, week, or month in the reporting time
+/// zone. A subject enters at their first qualifying cohort event in the query
+/// interval.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct RetentionQuery {
@@ -1429,14 +1430,16 @@ impl crate::runtime::QueryValue for FunnelOrder {
     }
 }
 
-/// The width of a UTC retention period.
+/// The retention period in the reporting time zone (UTC by default).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum RetentionInterval {
-    /// One UTC calendar day.
+    /// One calendar day starting at 00:00:00 local time.
     Day,
-    /// One UTC ISO week starting Monday at 00:00:00Z.
+    /// One ISO week starting Monday at 00:00:00 local time.
     Week,
+    /// One calendar month starting on day 1 at 00:00:00 local time.
+    Month,
     /// A value this SDK version does not know.
     Unknown(String),
 }
@@ -1447,6 +1450,7 @@ impl RetentionInterval {
         match self {
             Self::Day => "day",
             Self::Week => "week",
+            Self::Month => "month",
             Self::Unknown(s) => s.as_str(),
         }
     }
@@ -1456,6 +1460,7 @@ impl RetentionInterval {
         match s {
             "day" => Self::Day,
             "week" => Self::Week,
+            "month" => Self::Month,
             other => Self::Unknown(other.to_string()),
         }
     }

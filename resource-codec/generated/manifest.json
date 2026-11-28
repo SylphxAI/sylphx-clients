@@ -811,21 +811,27 @@
       ]
     },
     {
-      "doc": "The width of a UTC retention period.",
+      "doc": "The retention period in the reporting time zone (UTC by default).",
       "name": "sylphx.analytics.v1.RetentionInterval",
       "package": "sylphx.analytics.v1",
       "values": [
         {
-          "doc": "One UTC calendar day.",
+          "doc": "One calendar day starting at 00:00:00 local time.",
           "number": 1,
           "proto_name": "RETENTION_INTERVAL_DAY",
           "wire": "day"
         },
         {
-          "doc": "One UTC ISO week starting Monday at 00:00:00Z.",
+          "doc": "One ISO week starting Monday at 00:00:00 local time.",
           "number": 2,
           "proto_name": "RETENTION_INTERVAL_WEEK",
           "wire": "week"
+        },
+        {
+          "doc": "One calendar month starting on day 1 at 00:00:00 local time.",
+          "number": 3,
+          "proto_name": "RETENTION_INTERVAL_MONTH",
+          "wire": "month"
         }
       ]
     },
@@ -24674,7 +24680,7 @@
       "package": "sylphx.analytics.v1"
     },
     {
-      "doc": "Subject retention by reporting calendar period. A subject enters at their\nfirst qualifying cohort event in the query interval.",
+      "doc": "Subject retention by calendar day, week, or month in the reporting time\nzone. A subject enters at their first qualifying cohort event in the query\ninterval.",
       "fields": [
         {
           "behaviors": [
