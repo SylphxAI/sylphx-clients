@@ -13,6 +13,7 @@ import {
 	type SignalEventInput,
 	type SignalIngestOptions,
 	type SignalPageViewOptions,
+	type SignalSessionOptions,
 } from '../src/signal.js'
 
 const denied: SignalConsent = {
@@ -1228,19 +1229,135 @@ test('keeps a session for SPA navigation and reloads until inactivity exceeds 30
 		clock.mockReturnValue(start)
 		signal.setConsent('analytics_only')
 		expect(await signal.pageView()).toBe(true)
-		clock.mockReturnValue(start + 29 * minute)
+		const spaTime = start + 30 * minute - 1_000
+		clock.mockReturnValue(spaTime)
 		expect(await signal.pageView('/spa')).toBe(true)
 		signal.dispose()
 		signal = createSignalBrowser(options)
-		clock.mockReturnValue(start + 59 * minute)
+		const reloadTime = spaTime + 30 * minute
+		clock.mockReturnValue(reloadTime)
 		expect(await signal.pageView('/reload')).toBe(true)
-		clock.mockReturnValue(start + 89 * minute + 1)
+		clock.mockReturnValue(reloadTime + 30 * minute + 1_000)
 		expect(await signal.pageView('/new')).toBe(true)
 		const [first, spa, reload, next] = batches().map(({ events }) => events[0])
 		expect(spa.session_id).toBe(first.session_id)
 		expect(reload.session_id).toBe(first.session_id)
 		expect(next.session_id).not.toBe(first.session_id)
 		expect(next.distinct_id).toBe(first.distinct_id)
+	} finally {
+		clock.mockRestore()
+		signal.dispose()
+	}
+})
+
+async function checkTabSession(
+	session: SignalSessionOptions,
+	start: number,
+	checks: readonly (readonly [now: number, rotate: boolean])[],
+) {
+	const { location, values } = browser()
+	location.href = 'https://example.com/'
+	const { ingest, batches } = ingestTransport()
+	const signal = createSignalBrowser({ requireExplicitConsent: true, ingest, session })
+	const clock = jest.spyOn(Date, 'now')
+	try {
+		clock.mockReturnValue(start)
+		signal.setConsent('analytics_only')
+		expect(await signal.track({ eventName: 'visit' })).toBe(true)
+		const storedAnonymous = values.get(anonymousStorageSlot)
+		expect(storedAnonymous).toEqual(expect.any(String))
+		for (const [now, rotate] of checks) {
+			clock.mockReturnValue(now)
+			expect(await signal.track({ eventName: 'visit' })).toBe(true)
+			const history = batches()
+			const [previous, current] = history.slice(-2).map(({ events }) => events[0])
+			if (rotate) expect(current.session_id).not.toBe(previous.session_id)
+			else expect(current.session_id).toBe(previous.session_id)
+			expect(current.distinct_id).toBe(history[0].events[0].distinct_id)
+			expect(values.get(anonymousStorageSlot)).toBe(storedAnonymous)
+		}
+	} finally {
+		clock.mockRestore()
+		signal.dispose()
+	}
+}
+
+test.each([
+	[5, 5],
+	[0, 1],
+	[-5, 1],
+	[500, 240],
+	[NaN, 30],
+	[Infinity, 30],
+])('timeoutMinutes %s uses a %s-minute sliding timeout', async (timeoutMinutes, expected) => {
+	const start = Date.parse('2026-11-28T12:00:00Z')
+	const gap = expected * 60_000
+	await checkTabSession({ timeoutMinutes }, start, [
+		[start + gap - 1_000, false],
+		[start + 2 * gap, true],
+	])
+})
+
+test.each([
+	[
+		'UTC midnight in New York',
+		'America/New_York',
+		'2026-11-28T23:55:00Z',
+		'2026-11-29T00:05:00Z',
+		false,
+	],
+	['New York midnight', 'America/New_York', '2026-11-29T04:55:00Z', '2026-11-29T05:05:00Z', true],
+	['Tokyo midnight', ' Asia/Tokyo ', '2026-11-28T14:55:00Z', '2026-11-28T15:05:00Z', true],
+	[
+		'spring-forward in New York',
+		'America/New_York',
+		'2026-03-08T06:55:00Z',
+		'2026-03-08T07:05:00Z',
+		false,
+	],
+	[
+		'fall-back in New York',
+		'America/New_York',
+		'2026-11-01T05:55:00Z',
+		'2026-11-01T06:05:00Z',
+		false,
+	],
+] as const)('applies the reporting day at %s', async (_name, resetAtMidnightTimeZone, from, to, rotate) => {
+	await checkTabSession({ resetAtMidnightTimeZone }, Date.parse(from), [[Date.parse(to), rotate]])
+})
+
+test.each([
+	'Mars/Olympus_Mons',
+	'',
+])('ignores invalid or empty reporting time zone %j', async (resetAtMidnightTimeZone) => {
+	const start = Date.parse('2026-11-28T23:58:00Z')
+	await checkTabSession({ timeoutMinutes: 5, resetAtMidnightTimeZone }, start, [
+		[start + 299_000, false],
+		[start + 600_000, true],
+	])
+})
+
+test('explicit ingest session ID wins across timeout and reporting midnight without persisting', async () => {
+	const { location, sessions } = browser()
+	location.href = 'https://example.com/'
+	const { ingest, batches } = ingestTransport()
+	const signal = createSignalBrowser({
+		requireExplicitConsent: true,
+		ingest: { ...ingest, sessionId: 'caller-session' },
+		session: { timeoutMinutes: 1, resetAtMidnightTimeZone: 'UTC' },
+	})
+	const clock = jest.spyOn(Date, 'now')
+	try {
+		clock.mockReturnValue(Date.parse('2026-11-28T23:59:00Z'))
+		signal.setConsent('analytics_only')
+		expect(await signal.track({ eventName: 'visit' })).toBe(true)
+		clock.mockReturnValue(Date.parse('2026-11-29T00:02:00Z'))
+		expect(await signal.track({ eventName: 'visit' })).toBe(true)
+		expect(batches().map(({ events }) => events[0].session_id)).toEqual([
+			'caller-session',
+			'caller-session',
+		])
+		expect(sessions.size).toBe(0)
 	} finally {
 		clock.mockRestore()
 		signal.dispose()

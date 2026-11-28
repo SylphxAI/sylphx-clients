@@ -20,6 +20,7 @@ export {
 	type SignalHeartbeatOptions,
 	type SignalIngestOptions,
 	type SignalPageViewOptions,
+	type SignalSessionOptions,
 } from './signal/browser.js'
 export {
 	type ConsentChoice,

@@ -51,11 +51,20 @@ export interface SignalBrowserOptions {
 	engagement?: boolean
 	/** Opt in to periodic foreground time measurement after analytics consent. Off by default. */
 	heartbeat?: boolean | SignalHeartbeatOptions
+	/** Configure tab session expiration. Default: 30 minutes of inactivity, no midnight reset. */
+	session?: SignalSessionOptions
 }
 
 export interface SignalHeartbeatOptions {
 	/** Seconds between foreground heartbeats; defaults to 60, clamped to 15–300. */
 	intervalSeconds?: number
+}
+
+export interface SignalSessionOptions {
+	/** Minutes of inactivity before starting a new tab session; defaults to 30, clamped to 1–240. */
+	timeoutMinutes?: number
+	/** Optional IANA time zone (e.g. 'UTC' or 'America/New_York') for reporting-midnight session resets. */
+	resetAtMidnightTimeZone?: string
 }
 
 export interface SignalIngestOptions {
@@ -114,6 +123,33 @@ function isEventIdentifier(value: unknown): value is string {
 // timestamp is creation time for the anonymous record, last activity for the session record.
 type StoredIdentity = { id: string; timestamp: number }
 
+type SessionPolicy = { timeoutMs: number; dayFormatter?: Intl.DateTimeFormat }
+
+function resolveSessionPolicy(options?: SignalSessionOptions): SessionPolicy {
+	const minutes = options?.timeoutMinutes
+	const timeoutMs =
+		minutes !== undefined && Number.isFinite(minutes)
+			? Math.min(240, Math.max(1, minutes)) * 60 * 1000
+			: sessionGap
+	const zone = options?.resetAtMidnightTimeZone
+	const timeZone = typeof zone === 'string' ? zone.trim() : ''
+	let dayFormatter: Intl.DateTimeFormat | undefined
+	if (timeZone) {
+		try {
+			dayFormatter = new Intl.DateTimeFormat('en-US', {
+				timeZone,
+				calendar: 'iso8601',
+				year: 'numeric',
+				month: '2-digit',
+				day: '2-digit',
+			})
+		} catch {
+			// An unknown time zone leaves inactivity as the only reset condition.
+		}
+	}
+	return { timeoutMs, dayFormatter }
+}
+
 function beforeAnonymousExpiry(createdAt: number, now: number): boolean {
 	const expiry = new Date(createdAt)
 	const day = expiry.getUTCDate()
@@ -123,7 +159,11 @@ function beforeAnonymousExpiry(createdAt: number, now: number): boolean {
 	return now < expiry.getTime()
 }
 
-function identitySlot(storage: 'localStorage' | 'sessionStorage', key: string) {
+function identitySlot(
+	storage: 'localStorage' | 'sessionStorage',
+	key: string,
+	{ timeoutMs, dayFormatter }: SessionPolicy = { timeoutMs: sessionGap },
+) {
 	let memory: StoredIdentity | undefined
 	let saved = false
 	let pendingRemoval = false
@@ -146,7 +186,9 @@ function identitySlot(storage: 'localStorage' | 'sessionStorage', key: string) {
 			value.timestamp <= now &&
 			(storage === 'localStorage'
 				? beforeAnonymousExpiry(value.timestamp, now)
-				: now - value.timestamp <= sessionGap)
+				: now - value.timestamp <= timeoutMs &&
+					(dayFormatter === undefined ||
+						dayFormatter.format(value.timestamp) === dayFormatter.format(now)))
 		)
 	}
 
@@ -286,7 +328,8 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 	const choiceKey = `${storageKey}.consent`
 	const touchKey = `${storageKey}.touch`
 	const anonymous = identitySlot('localStorage', `${storageKey}.anonymous`)
-	const session = identitySlot('sessionStorage', `${storageKey}.session`)
+	const sessionPolicy = resolveSessionPolicy(options.session)
+	const session = identitySlot('sessionStorage', `${storageKey}.session`, sessionPolicy)
 	const google = options.google
 	const clickIdMaxAgeMs = options.clickIdMaxAgeMs
 	const projectAttribution = options.projectAttribution
