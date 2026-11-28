@@ -480,8 +480,7 @@ function browser() {
 				values.set(name, value)
 			},
 			removeItem: (name: string) => {
-				removals.push(name)
-				values.delete(name)
+				if (values.delete(name)) removals.push(name)
 			},
 		},
 	})
@@ -951,7 +950,7 @@ test('ROW region resolution promotes only the current pending path and retains a
 		event_name: 'page_view',
 		properties: { path: '/pricing', utm_source: 'source', fbclid: 'Same.Click' },
 	})
-	expect(writes.map(([name]) => name)).toEqual([touchStorageSlot])
+	expect(writes.map(([name]) => name)).toEqual([touchStorageSlot, anonymousStorageSlot])
 	signal.dispose()
 })
 
@@ -1172,17 +1171,91 @@ test.each([
 	third.dispose()
 })
 
-test('regional defaults can send but never read or write persistent identity without explicit consent', async () => {
-	const { location, values, sessions, reads, writes } = browser()
-	location.href = 'https://example.com/'
+test('reuses anonymous and tab session IDs across full reloads with a regional grant', async () => {
+	const { location, values, sessions } = browser()
 	const { ingest, batches } = ingestTransport()
-	values.set(anonymousStorageSlot, JSON.stringify({ id: 'not-consented', timestamp: Date.now() }))
+	const options = { region: 'US', ingest }
+	const start = Date.parse('2026-11-25T12:00:00Z')
+	const clock = jest.spyOn(Date, 'now').mockReturnValue(start)
+	try {
+		const first = createSignalBrowser(options)
+		expect(await first.pageView()).toBe(true)
+		expect(await first.track({ eventName: 'visit' })).toBe(true)
+		first.dispose()
+
+		clock.mockReturnValue(start + 5 * 60_000)
+		location.href = 'https://example.com/app'
+		const second = createSignalBrowser(options)
+		expect(await second.pageView()).toBe(true)
+		expect(await second.track({ eventName: 'visit' })).toBe(true)
+		second.dispose()
+
+		const [landing, firstTrack, app, secondTrack] = batches().map(({ events }) => events[0])
+		const identity = { distinct_id: landing.distinct_id, session_id: landing.session_id }
+		for (const event of [firstTrack, app, secondTrack]) expect(event).toMatchObject(identity)
+		expect(JSON.parse(values.get(anonymousStorageSlot) ?? 'null').id).toBe(identity.distinct_id)
+		expect(JSON.parse(sessions.get(sessionStorageSlot) ?? 'null').id).toBe(identity.session_id)
+		expect(values.has(consentStorageSlot)).toBe(false)
+	} finally {
+		clock.mockRestore()
+	}
+})
+
+test.each([
+	{ region: 'DE' },
+	{ region: 'US', gpc: true },
+	{ region: undefined },
+	{ region: 'XX' },
+	{ region: 'US', requireExplicitConsent: true },
+])('does not send, read or store identity without effective consent (%j)', async (options) => {
+	const { win, values, sessions, reads, writes } = browser()
+	const readSession = jest.spyOn(win.sessionStorage, 'getItem')
+	const writeSession = jest.spyOn(win.sessionStorage, 'setItem')
+	if (options.gpc) {
+		const prior = JSON.stringify({ id: 'prior-id', timestamp: Date.now() })
+		values.set(anonymousStorageSlot, prior)
+		sessions.set(sessionStorageSlot, prior)
+	}
+	// With no hint, a failed first-party region lookup must leave consent denied.
+	override('fetch', async () => new Response(null, { status: 404 }))
+	const { ingest, calls } = ingestTransport()
+	const signal = createSignalBrowser({ ...options, ingest })
+	await signal.ready
+	expect(await signal.pageView()).toBe(false)
+	expect(await signal.track({ eventName: 'visit' })).toBe(false)
+	expect(calls).toHaveLength(0)
+	expect(reads).not.toContain(anonymousStorageSlot)
+	if (!options.gpc) expect(reads.every((slot) => slot === consentStorageSlot)).toBe(true)
+	expect(readSession).not.toHaveBeenCalled()
+	expect(writeSession).not.toHaveBeenCalled()
+	expect(writes).toEqual([])
+	expect(values.size).toBe(0)
+	expect(sessions.size).toBe(0)
+	signal.dispose()
+})
+
+test('withdrawal clears regional identity and campaign touch before a fresh grant', async () => {
+	const { location, values, sessions } = browser()
+	const { ingest, batches } = ingestTransport()
 	const signal = createSignalBrowser({ region: 'US', ingest })
 	expect(await signal.pageView()).toBe(true)
-	expect(batches()[0].events[0].distinct_id).not.toBe('not-consented')
-	expect(reads).not.toContain(anonymousStorageSlot)
-	expect(writes).toEqual([])
+	expect(values.has(consentStorageSlot)).toBe(false)
+	expect(values.has(anonymousStorageSlot)).toBe(true)
+	expect(values.has(touchStorageSlot)).toBe(true)
+	expect(sessions.has(sessionStorageSlot)).toBe(true)
+
+	signal.setConsent('denied')
+	expect([...values.keys()]).toEqual([consentStorageSlot])
 	expect(sessions.size).toBe(0)
+	location.href = 'https://example.com/app'
+	expect(await signal.track({ eventName: 'visit' })).toBe(false)
+
+	signal.setConsent('analytics_only')
+	expect(await signal.track({ eventName: 'visit' })).toBe(true)
+	const [before, after] = batches().map(({ events }) => events[0])
+	expect(after.distinct_id).not.toBe(before.distinct_id)
+	expect(after.session_id).not.toBe(before.session_id)
+	expect(values.has(touchStorageSlot)).toBe(false)
 	signal.dispose()
 })
 
@@ -2139,7 +2212,7 @@ describe('Signal browser ingest retries', () => {
 })
 
 test('rechecks consent after serializing caller properties and never sends after a GPC change', async () => {
-	const { nav, values, removals } = browser()
+	const { nav, values, removals, sessions } = browser()
 	const { ingest, calls } = ingestTransport()
 	const signal = createSignalBrowser({ region: 'ROW', ingest })
 	expect(
@@ -2154,8 +2227,9 @@ test('rechecks consent after serializing caller properties and never sends after
 		}),
 	).toBe(false)
 	expect(calls).toHaveLength(0)
-	expect(removals).toEqual([touchStorageSlot])
+	expect(removals).toEqual([anonymousStorageSlot, touchStorageSlot])
 	expect(values.has(touchStorageSlot)).toBe(false)
+	expect(sessions.size).toBe(0)
 	signal.dispose()
 })
 
@@ -2288,15 +2362,16 @@ test('configured IDs are never marked or sent as a browser-generated alias', asy
 })
 
 test.each([
-	false,
-	true,
-])('keeps a retained ID unmarked on reload (mark before reload: %s)', async (enabled) => {
+	{ region: 'US', enabled: true },
+	{ requireExplicitConsent: true, enabled: false },
+	{ requireExplicitConsent: true, enabled: true },
+])('keeps a retained ID unmarked on reload (%j)', async ({ enabled, ...privacy }) => {
 	const { values, location } = browser()
 	location.href = 'https://example.com/landing'
-	values.set(consentStorageSlot, 'analytics_only')
+	if (privacy.requireExplicitConsent) values.set(consentStorageSlot, 'analytics_only')
 	const { ingest, batches } = ingestTransport()
 	const options = {
-		requireExplicitConsent: true,
+		...privacy,
 		ingest: { ...ingest, linkAnonymousForErasure: true },
 	}
 	const first = createSignalBrowser({
@@ -2305,7 +2380,8 @@ test.each([
 	})
 	expect(await first.track({ eventName: 'visit' })).toBe(true)
 	const before = batches()[0].events[0]
-	expect(Object.hasOwn(before, 'anonymous_commitment')).toBe(enabled)
+	if (enabled) expect(before.anonymous_commitment).toMatch(/^[a-f0-9]{64}$/)
+	else expect(before).not.toHaveProperty('anonymous_commitment')
 	first.dispose()
 	const reloaded = createSignalBrowser(options)
 	expect(await reloaded.track({ eventName: 'browse' })).toBe(true)

@@ -169,7 +169,8 @@ function identitySlot(
 	let pendingRemoval = false
 
 	function clearStorage() {
-		if (window[storage].getItem(key) !== null) window[storage].removeItem(key)
+		// Clear without reading a potentially unconsented ID.
+		window[storage].removeItem(key)
 		pendingRemoval = false
 	}
 
@@ -626,8 +627,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 			const firstEventId = inputs[0]?.eventId ?? crypto.randomUUID()
 			const now = Date.now()
 			const eventTime = new Date(now).toISOString()
-			// Regional defaults can still send, but only an explicit analytics grant enables identity storage.
-			const persist = privacy.storedChoice === 'granted' || privacy.storedChoice === 'analytics_only'
+			const persist = resolveEffectiveConsent(privacy).analytics_storage === 'granted'
 			const anonymousId = distinctId === undefined
 				? anonymous.next(now, persist, ingest.linkAnonymousForErasure ? mintMark : undefined)
 				: undefined

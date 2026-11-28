@@ -120,12 +120,12 @@ reuse that ID for the same logical view across retries or remounts. Otherwise,
 Signal generates a UUID. Caller properties and IDs are never buffered before
 consent.
 
-After an explicit analytics grant, Signal saves a random anonymous ID in
-first-party `localStorage` on the first send. It is shared across reloads and tabs
-on the same origin and replaced after 13 months. The generated session ID lives
-in `sessionStorage`: it survives reloads and SPA navigation in the same tab and
-changes when more than 30 minutes have passed since the last send. An implicit
-regional grant or blocked browser storage keeps IDs in memory only. Signal
+When analytics storage is granted, including by regional default, Signal saves a
+random anonymous ID in first-party `localStorage` on the first send. It is shared
+across reloads and tabs on the same origin and replaced after 13 months. The
+session ID lives in `sessionStorage`: it survives reloads and SPA navigation in
+the same tab and changes when more than 30 minutes have passed since the last
+send. If the browser blocks identity storage, the IDs stay in memory. Signal
 uses no cookies or fingerprinting for identity.
 
 Use `identify(opaqueId)` for signed-in events; the supplied ID stays in memory.
