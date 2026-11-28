@@ -23692,6 +23692,104 @@
       "package": "sylphx.analytics.v1"
     },
     {
+      "doc": "An event that cancels an active conversion between two funnel steps.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Event name that cancels the chain.",
+          "filterable": false,
+          "name": "event_name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Zero-based start step, at most steps.size - 2. Omit or use 0 for step 0.",
+          "filterable": false,
+          "name": "from_step_index",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 14,
+              "minimum": 0
+            }
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Zero-based end step, greater than the start and within steps. Omit for the last step.",
+          "filterable": false,
+          "name": "to_step_index",
+          "number": 3,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 15,
+              "minimum": 1
+            }
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Up to four exact string matches on the exclusion event itself.",
+          "filterable": false,
+          "name": "property_filters",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "map",
+            "value": {
+              "kind": "scalar",
+              "scalar": "string"
+            }
+          }
+        }
+      ],
+      "name": "sylphx.analytics.v1.FunnelExclusion",
+      "package": "sylphx.analytics.v1"
+    },
+    {
       "doc": "The longest ordered prefix reached by each subject or session within a conversion window.",
       "fields": [
         {
@@ -23828,6 +23926,25 @@
           "type": {
             "kind": "message",
             "name": "sylphx.analytics.v1.FunnelStepFilter"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Up to four events that cancel active chains between configured steps.\nExclusion events ignore breakdown and query-wide filters (16 filter pairs total).",
+          "filterable": false,
+          "name": "exclusions",
+          "number": 8,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.analytics.v1.FunnelExclusion"
           }
         }
       ],

@@ -326,6 +326,18 @@ export interface EventResult {
 	reason?: string
 }
 
+/** An event that cancels an active conversion between two funnel steps. */
+export interface FunnelExclusion {
+	/** Event name that cancels the chain. */
+	eventName?: string
+	/** Zero-based start step, at most steps.size - 2. Omit or use 0 for step 0. */
+	fromStepIndex?: number
+	/** Zero-based end step, greater than the start and within steps. Omit for the last step. */
+	toStepIndex?: number
+	/** Up to four exact string matches on the exclusion event itself. */
+	propertyFilters?: Record<string, string>
+}
+
 /** The longest ordered prefix reached by each subject or session within a conversion window. */
 export interface FunnelQuery {
 	/**
@@ -355,6 +367,11 @@ export interface FunnelQuery {
 	 * 16 total key/value pairs across the funnel.
 	 */
 	stepFilters?: FunnelStepFilter[]
+	/**
+	 * Up to four events that cancel active chains between configured steps.
+	 * Exclusion events ignore breakdown and query-wide filters (16 filter pairs total).
+	 */
+	exclusions?: FunnelExclusion[]
 }
 
 /**
@@ -696,12 +713,19 @@ runtime.registerSchemas({
 	'sylphx.analytics.v1.EventResult': [
 		['eventId', 'event_id'],
 	],
+	'sylphx.analytics.v1.FunnelExclusion': [
+		['eventName', 'event_name'],
+		['fromStepIndex', 'from_step_index'],
+		['toStepIndex', 'to_step_index'],
+		['propertyFilters', 'property_filters', undefined, 'map'],
+	],
 	'sylphx.analytics.v1.FunnelQuery': [
 		['conversionWindowSeconds', 'conversion_window_seconds'],
 		['breakdownProperty', 'breakdown_property'],
 		['propertyFilters', 'property_filters', undefined, 'map'],
 		['countBy', 'count_by'],
 		['stepFilters', 'step_filters', 'sylphx.analytics.v1.FunnelStepFilter'],
+		['exclusions', 'exclusions', 'sylphx.analytics.v1.FunnelExclusion'],
 	],
 	'sylphx.analytics.v1.FunnelStepFilter': [
 		['stepIndex', 'step_index'],

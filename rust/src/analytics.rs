@@ -620,6 +620,42 @@ pub struct EventResult {
     pub reason: String,
 }
 
+/// An event that cancels an active conversion between two funnel steps.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct FunnelExclusion {
+    /// Event name that cancels the chain.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "eventName"
+    )]
+    pub event_name: String,
+    /// Zero-based start step, at most steps.size - 2. Omit or use 0 for step 0.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "fromStepIndex"
+    )]
+    pub from_step_index: i32,
+    /// Zero-based end step, greater than the start and within steps. Omit for the last step.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "toStepIndex"
+    )]
+    pub to_step_index: Option<i32>,
+    /// Up to four exact string matches on the exclusion event itself.
+    #[serde(
+        default,
+        skip_serializing_if = "std::collections::BTreeMap::is_empty",
+        alias = "propertyFilters"
+    )]
+    pub property_filters: std::collections::BTreeMap<String, String>,
+}
+
 /// The longest ordered prefix reached by each subject or session within a conversion window.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -667,6 +703,10 @@ pub struct FunnelQuery {
     /// 16 total key/value pairs across the funnel.
     #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "stepFilters")]
     pub step_filters: Vec<FunnelStepFilter>,
+    /// Up to four events that cancel active chains between configured steps.
+    /// Exclusion events ignore breakdown and query-wide filters (16 filter pairs total).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub exclusions: Vec<FunnelExclusion>,
 }
 
 /// Exact string property matches required on one funnel step in addition to

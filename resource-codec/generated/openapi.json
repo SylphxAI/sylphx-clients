@@ -6116,6 +6116,40 @@
         ],
         "type": "string"
       },
+      "sylphx.analytics.v1.FunnelExclusion": {
+        "description": "An event that cancels an active conversion between two funnel steps.",
+        "properties": {
+          "event_name": {
+            "description": "Event name that cancels the chain.",
+            "type": "string"
+          },
+          "from_step_index": {
+            "description": "Zero-based start step, at most steps.size - 2. Omit or use 0 for step 0.",
+            "format": "int32",
+            "maximum": 14,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "property_filters": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Up to four exact string matches on the exclusion event itself.",
+            "type": "object"
+          },
+          "to_step_index": {
+            "description": "Zero-based end step, greater than the start and within steps. Omit for the last step.",
+            "format": "int32",
+            "maximum": 15,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "event_name"
+        ],
+        "type": "object"
+      },
       "sylphx.analytics.v1.FunnelQuery": {
         "description": "The longest ordered prefix reached by each subject or session within a conversion window.",
         "properties": {
@@ -6131,6 +6165,13 @@
           "count_by": {
             "$ref": "#/components/schemas/sylphx.analytics.v1.FunnelCountBy",
             "description": "Unit to count at each step. Omit to count subjects."
+          },
+          "exclusions": {
+            "description": "Up to four events that cancel active chains between configured steps.\nExclusion events ignore breakdown and query-wide filters (16 filter pairs total).",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.analytics.v1.FunnelExclusion"
+            },
+            "type": "array"
           },
           "limit": {
             "description": "Maximum breakdown values returned. Defaults to 50; clamped to 1–200.",
