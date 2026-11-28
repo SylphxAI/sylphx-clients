@@ -892,6 +892,31 @@
       ]
     },
     {
+      "doc": "Calendar intervals for session reporting.",
+      "name": "sylphx.analytics.v1.SessionInterval",
+      "package": "sylphx.analytics.v1",
+      "values": [
+        {
+          "doc": "One calendar day starting at local midnight in the reporting time_zone.",
+          "number": 1,
+          "proto_name": "SESSION_INTERVAL_DAY",
+          "wire": "day"
+        },
+        {
+          "doc": "One ISO week starting Monday at local midnight in the reporting time_zone.",
+          "number": 2,
+          "proto_name": "SESSION_INTERVAL_WEEK",
+          "wire": "week"
+        },
+        {
+          "doc": "One calendar month starting on day 1 at local midnight in the reporting time_zone.",
+          "number": 3,
+          "proto_name": "SESSION_INTERVAL_MONTH",
+          "wire": "month"
+        }
+      ]
+    },
+    {
       "doc": "ArtifactKind is what an Artifact is.",
       "name": "sylphx.artifacts.v1.ArtifactKind",
       "package": "sylphx.artifacts.v1",
@@ -23143,12 +23168,12 @@
       "package": "sylphx.analytics.v1"
     },
     {
-      "doc": "Sessions for one UTC day and breakdown value.",
+      "doc": "Sessions for one day (default), Monday-start week, or day-1 month and breakdown value.",
       "fields": [
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "The UTC start of the day containing the first in-window event.",
+          "doc": "Start of the first in-window event's bucket in the reporting time_zone\n(UTC by default), returned as a UTC instant.",
           "filterable": false,
           "name": "bucket_start",
           "number": 1,
@@ -25095,14 +25120,14 @@
       "package": "sylphx.analytics.v1"
     },
     {
-      "doc": "Sessions over deduplicated events, attributed to the UTC day of their first\nin-window event. An SDK session ID wins: neither midnight, sign-in, nor a\ngap greater than 30 minutes splits that ID. Events without a session ID\nform runs per stored subject, split only at gaps strictly over 30 minutes.",
+      "doc": "Sessions over deduplicated events, assigned to the day (default), Monday-start\nweek, or day-1 month of their first in-window event in the reporting time_zone\n(UTC by default). An SDK session ID is not split on sign-in, midnight, or idle\ngaps. Without an ID, runs per stored subject split at gaps over 30 minutes.",
       "fields": [
         {
           "behaviors": [
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "String property of the first in-window event, whose UTC day owns the session.\nA supplied SDK session ID is not split on sign-in, midnight, or idle gaps.\nWithout an SDK ID, consecutive events on the same stored subject form a\nsession until a gap strictly exceeds 30 minutes. Omit for unsegmented\nbuckets. A dot is literal, not a path. Missing or non-string values group\nwith the empty string.",
+          "doc": "String property of the first in-window event. Omit for unsegmented buckets.\nA dot is literal, not a path. Missing or non-string values group with the\nempty string.",
           "filterable": false,
           "name": "breakdown_property",
           "number": 1,
@@ -25155,6 +25180,25 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Calendar interval. Omit to report by day.",
+          "filterable": false,
+          "name": "interval",
+          "number": 4,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "enum",
+            "name": "sylphx.analytics.v1.SessionInterval"
           }
         }
       ],

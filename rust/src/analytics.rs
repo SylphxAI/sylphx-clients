@@ -403,11 +403,12 @@ pub struct AnalyticsRollupBucket {
     pub property_sum: Option<f64>,
 }
 
-/// Sessions for one UTC day and breakdown value.
+/// Sessions for one day (default), Monday-start week, or day-1 month and breakdown value.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct AnalyticsSessionBucket {
-    /// The UTC start of the day containing the first in-window event.
+    /// Start of the first in-window event's bucket in the reporting time_zone
+    /// (UTC by default), returned as a UTC instant.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -1111,19 +1112,16 @@ pub struct RollupQuery {
     pub limit: Option<i32>,
 }
 
-/// Sessions over deduplicated events, attributed to the UTC day of their first
-/// in-window event. An SDK session ID wins: neither midnight, sign-in, nor a
-/// gap greater than 30 minutes splits that ID. Events without a session ID
-/// form runs per stored subject, split only at gaps strictly over 30 minutes.
+/// Sessions over deduplicated events, assigned to the day (default), Monday-start
+/// week, or day-1 month of their first in-window event in the reporting time_zone
+/// (UTC by default). An SDK session ID is not split on sign-in, midnight, or idle
+/// gaps. Without an ID, runs per stored subject split at gaps over 30 minutes.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct SessionsQuery {
-    /// String property of the first in-window event, whose UTC day owns the session.
-    /// A supplied SDK session ID is not split on sign-in, midnight, or idle gaps.
-    /// Without an SDK ID, consecutive events on the same stored subject form a
-    /// session until a gap strictly exceeds 30 minutes. Omit for unsegmented
-    /// buckets. A dot is literal, not a path. Missing or non-string values group
-    /// with the empty string.
+    /// String property of the first in-window event. Omit for unsegmented buckets.
+    /// A dot is literal, not a path. Missing or non-string values group with the
+    /// empty string.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
@@ -1141,6 +1139,9 @@ pub struct SessionsQuery {
     /// Maximum bucket rows returned. Defaults to 100; clamped to 1–500.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub limit: Option<i32>,
+    /// Calendar interval. Omit to report by day.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub interval: Option<SessionInterval>,
 }
 
 /// The active-user window in the reporting time zone.
@@ -1636,6 +1637,61 @@ impl<'de> serde::Deserialize<'de> for RollupInterval {
 }
 
 impl crate::runtime::QueryValue for RollupInterval {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// Calendar intervals for session reporting.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum SessionInterval {
+    /// One calendar day starting at local midnight in the reporting time_zone.
+    Day,
+    /// One ISO week starting Monday at local midnight in the reporting time_zone.
+    Week,
+    /// One calendar month starting on day 1 at local midnight in the reporting time_zone.
+    Month,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl SessionInterval {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Day => "day",
+            Self::Week => "week",
+            Self::Month => "month",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "day" => Self::Day,
+            "week" => Self::Week,
+            "month" => Self::Month,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for SessionInterval {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for SessionInterval {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for SessionInterval {
     fn query_value(&self) -> Option<String> {
         Some(self.as_str().to_string())
     }

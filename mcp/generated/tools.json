@@ -7222,7 +7222,16 @@
             "description": "Session count and exact median duration by session start day.",
             "properties": {
               "breakdown_property": {
-                "description": "String property of the first in-window event, whose UTC day owns the session.\nA supplied SDK session ID is not split on sign-in, midnight, or idle gaps.\nWithout an SDK ID, consecutive events on the same stored subject form a\nsession until a gap strictly exceeds 30 minutes. Omit for unsegmented\nbuckets. A dot is literal, not a path. Missing or non-string values group\nwith the empty string.",
+                "description": "String property of the first in-window event. Omit for unsegmented buckets.\nA dot is literal, not a path. Missing or non-string values group with the\nempty string.",
+                "type": "string"
+              },
+              "interval": {
+                "description": "Calendar interval. Omit to report by day.",
+                "enum": [
+                  "day",
+                  "week",
+                  "month"
+                ],
                 "type": "string"
               },
               "limit": {
@@ -54421,7 +54430,16 @@
             "description": "Session count and exact median duration by session start day.",
             "properties": {
               "breakdown_property": {
-                "description": "String property of the first in-window event, whose UTC day owns the session.\nA supplied SDK session ID is not split on sign-in, midnight, or idle gaps.\nWithout an SDK ID, consecutive events on the same stored subject form a\nsession until a gap strictly exceeds 30 minutes. Omit for unsegmented\nbuckets. A dot is literal, not a path. Missing or non-string values group\nwith the empty string.",
+                "description": "String property of the first in-window event. Omit for unsegmented buckets.\nA dot is literal, not a path. Missing or non-string values group with the\nempty string.",
+                "type": "string"
+              },
+              "interval": {
+                "description": "Calendar interval. Omit to report by day.",
+                "enum": [
+                  "day",
+                  "week",
+                  "month"
+                ],
                 "type": "string"
               },
               "limit": {

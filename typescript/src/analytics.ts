@@ -207,9 +207,12 @@ export interface AnalyticsRollupBucket {
 	propertySum?: number
 }
 
-/** Sessions for one UTC day and breakdown value. */
+/** Sessions for one day (default), Monday-start week, or day-1 month and breakdown value. */
 export interface AnalyticsSessionBucket {
-	/** The UTC start of the day containing the first in-window event. */
+	/**
+	 * Start of the first in-window event's bucket in the reporting time_zone
+	 * (UTC by default), returned as a UTC instant.
+	 */
 	bucketStart?: string
 	/** The entry-event breakdown value; empty when unsegmented. */
 	breakdownValue?: string
@@ -615,19 +618,16 @@ export interface RollupQuery {
 }
 
 /**
- * Sessions over deduplicated events, attributed to the UTC day of their first
- * in-window event. An SDK session ID wins: neither midnight, sign-in, nor a
- * gap greater than 30 minutes splits that ID. Events without a session ID
- * form runs per stored subject, split only at gaps strictly over 30 minutes.
+ * Sessions over deduplicated events, assigned to the day (default), Monday-start
+ * week, or day-1 month of their first in-window event in the reporting time_zone
+ * (UTC by default). An SDK session ID is not split on sign-in, midnight, or idle
+ * gaps. Without an ID, runs per stored subject split at gaps over 30 minutes.
  */
 export interface SessionsQuery {
 	/**
-	 * String property of the first in-window event, whose UTC day owns the session.
-	 * A supplied SDK session ID is not split on sign-in, midnight, or idle gaps.
-	 * Without an SDK ID, consecutive events on the same stored subject form a
-	 * session until a gap strictly exceeds 30 minutes. Omit for unsegmented
-	 * buckets. A dot is literal, not a path. Missing or non-string values group
-	 * with the empty string.
+	 * String property of the first in-window event. Omit for unsegmented buckets.
+	 * A dot is literal, not a path. Missing or non-string values group with the
+	 * empty string.
 	 */
 	breakdownProperty?: string
 	/**
@@ -637,6 +637,8 @@ export interface SessionsQuery {
 	propertyFilters?: Record<string, string>
 	/** Maximum bucket rows returned. Defaults to 100; clamped to 1–500. */
 	limit?: number
+	/** Calendar interval. Omit to report by day. */
+	interval?: SessionInterval
 }
 
 /** The active-user window in the reporting time zone. */
@@ -665,6 +667,9 @@ export type RetentionMode = 'exact' | 'unbounded' | (string & {})
 
 /** The width of a rollup bucket in the reporting time_zone (UTC by default). */
 export type RollupInterval = 'hour' | 'day' | 'week' | 'month' | (string & {})
+
+/** Calendar intervals for session reporting. */
+export type SessionInterval = 'day' | 'week' | 'month' | (string & {})
 
 runtime.registerSchemas({
 	'sylphx.analytics.v1.ActiveUsersQuery': [

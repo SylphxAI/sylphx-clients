@@ -5912,7 +5912,7 @@
         "type": "object"
       },
       "sylphx.analytics.v1.AnalyticsSessionBucket": {
-        "description": "Sessions for one UTC day and breakdown value.",
+        "description": "Sessions for one day (default), Monday-start week, or day-1 month and breakdown value.",
         "properties": {
           "average_online_time_ms": {
             "description": "Online time divided by all qualifying sessions, in milliseconds; zero when\nonline time is zero.",
@@ -5923,7 +5923,7 @@
             "type": "string"
           },
           "bucket_start": {
-            "description": "The UTC start of the day containing the first in-window event.",
+            "description": "Start of the first in-window event's bucket in the reporting time_zone\n(UTC by default), returned as a UTC instant.",
             "format": "date-time",
             "type": "string"
           },
@@ -6598,12 +6598,25 @@
         ],
         "type": "object"
       },
+      "sylphx.analytics.v1.SessionInterval": {
+        "description": "Calendar intervals for session reporting.",
+        "enum": [
+          "day",
+          "week",
+          "month"
+        ],
+        "type": "string"
+      },
       "sylphx.analytics.v1.SessionsQuery": {
-        "description": "Sessions over deduplicated events, attributed to the UTC day of their first\nin-window event. An SDK session ID wins: neither midnight, sign-in, nor a\ngap greater than 30 minutes splits that ID. Events without a session ID\nform runs per stored subject, split only at gaps strictly over 30 minutes.",
+        "description": "Sessions over deduplicated events, assigned to the day (default), Monday-start\nweek, or day-1 month of their first in-window event in the reporting time_zone\n(UTC by default). An SDK session ID is not split on sign-in, midnight, or idle\ngaps. Without an ID, runs per stored subject split at gaps over 30 minutes.",
         "properties": {
           "breakdown_property": {
-            "description": "String property of the first in-window event, whose UTC day owns the session.\nA supplied SDK session ID is not split on sign-in, midnight, or idle gaps.\nWithout an SDK ID, consecutive events on the same stored subject form a\nsession until a gap strictly exceeds 30 minutes. Omit for unsegmented\nbuckets. A dot is literal, not a path. Missing or non-string values group\nwith the empty string.",
+            "description": "String property of the first in-window event. Omit for unsegmented buckets.\nA dot is literal, not a path. Missing or non-string values group with the\nempty string.",
             "type": "string"
+          },
+          "interval": {
+            "$ref": "#/components/schemas/sylphx.analytics.v1.SessionInterval",
+            "description": "Calendar interval. Omit to report by day."
           },
           "limit": {
             "description": "Maximum bucket rows returned. Defaults to 100; clamped to 1–500.",
