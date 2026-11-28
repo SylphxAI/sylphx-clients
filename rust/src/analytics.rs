@@ -189,7 +189,8 @@ pub struct AnalyticsFunnelStep {
         alias = "stepIndex"
     )]
     pub step_index: i32,
-    /// The event name of the step.
+    /// The configured event name at this position. In any-order mode, this is
+    /// a label for conversion depth, not the event counted at that depth.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -226,18 +227,18 @@ pub struct AnalyticsFunnelStep {
         alias = "conversionFromPreviousPct"
     )]
     pub conversion_from_previous_pct: f64,
-    /// Exact median milliseconds from step 0 among subjects (or sessions when
-    /// count_by is session) that reached this step. Zero at step 0 when reached;
-    /// omitted when no subjects or sessions reached this step.
+    /// Exact median elapsed milliseconds at first reach. In ordered mode the
+    /// baseline is step 0; in any-order mode it is the earliest active hit.
+    /// Zero at step 0 when reached; omitted when no subjects or sessions reached it.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         alias = "medianTimeFromStartMs"
     )]
     pub median_time_from_start_ms: Option<f64>,
-    /// Exact median milliseconds from the preceding step among subjects (or
-    /// sessions when count_by is session) that reached this step. Zero at step 0
-    /// when reached; omitted when no subjects or sessions reached this step.
+    /// Exact median milliseconds from the preceding hit at first reach: the
+    /// preceding configured step in ordered mode, or chronological hit in any-order mode.
+    /// Zero at step 0 when reached; omitted when no subjects or sessions reached it.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
@@ -656,12 +657,12 @@ pub struct FunnelExclusion {
     pub property_filters: std::collections::BTreeMap<String, String>,
 }
 
-/// The longest ordered prefix reached by each subject or session within a conversion window.
+/// Steps reached by each subject or session within a conversion window.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct FunnelQuery {
-    /// Two to 16 event names in step order. Each step must occur at a strictly
-    /// later event timestamp than the prior step, inside the query interval.
+    /// Two to 16 event names. Ordered mode requires strictly increasing timestamps
+    /// in this sequence. Any-order mode requires distinct step definitions.
     ///
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -703,10 +704,14 @@ pub struct FunnelQuery {
     /// 16 total key/value pairs across the funnel.
     #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "stepFilters")]
     pub step_filters: Vec<FunnelStepFilter>,
-    /// Up to four events that cancel active chains between configured steps.
+    /// Up to four events that cancel active attempts. Any-order mode only accepts
+    /// whole-funnel exclusions (from index 0 through the last step).
     /// Exclusion events ignore breakdown and query-wide filters (16 filter pairs total).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub exclusions: Vec<FunnelExclusion>,
+    /// Step ordering. Omit to require strictly ordered steps.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub order: Option<FunnelOrder>,
 }
 
 /// Exact string property matches required on one funnel step in addition to
@@ -1366,6 +1371,59 @@ impl<'de> serde::Deserialize<'de> for FunnelCountBy {
 }
 
 impl crate::runtime::QueryValue for FunnelCountBy {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// How configured funnel steps contribute to conversion depth.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum FunnelOrder {
+    /// Steps must occur in configured order at strictly later timestamps.
+    Ordered,
+    /// Distinct configured steps may occur in any order within the conversion window.
+    /// Each AnalyticsFunnelStep counts subjects or sessions that completed at least
+    /// step_index + 1 distinct steps within that window.
+    AnyOrder,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl FunnelOrder {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Ordered => "ordered",
+            Self::AnyOrder => "any_order",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "ordered" => Self::Ordered,
+            "any_order" => Self::AnyOrder,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for FunnelOrder {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for FunnelOrder {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for FunnelOrder {
     fn query_value(&self) -> Option<String> {
         Some(self.as_str().to_string())
     }

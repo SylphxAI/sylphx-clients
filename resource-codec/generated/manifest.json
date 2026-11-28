@@ -792,6 +792,25 @@
       ]
     },
     {
+      "doc": "How configured funnel steps contribute to conversion depth.",
+      "name": "sylphx.analytics.v1.FunnelOrder",
+      "package": "sylphx.analytics.v1",
+      "values": [
+        {
+          "doc": "Steps must occur in configured order at strictly later timestamps.",
+          "number": 1,
+          "proto_name": "FUNNEL_ORDER_ORDERED",
+          "wire": "ordered"
+        },
+        {
+          "doc": "Distinct configured steps may occur in any order within the conversion window.\nEach AnalyticsFunnelStep counts subjects or sessions that completed at least\nstep_index + 1 distinct steps within that window.",
+          "number": 2,
+          "proto_name": "FUNNEL_ORDER_ANY_ORDER",
+          "wire": "any_order"
+        }
+      ]
+    },
+    {
       "doc": "The width of a UTC retention period.",
       "name": "sylphx.analytics.v1.RetentionInterval",
       "package": "sylphx.analytics.v1",
@@ -22646,7 +22665,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "The event name of the step.",
+          "doc": "The configured event name at this position. In any-order mode, this is\na label for conversion depth, not the event counted at that depth.",
           "filterable": false,
           "name": "event_name",
           "number": 2,
@@ -22731,7 +22750,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "Exact median milliseconds from step 0 among subjects (or sessions when\ncount_by is session) that reached this step. Zero at step 0 when reached;\nomitted when no subjects or sessions reached this step.",
+          "doc": "Exact median elapsed milliseconds at first reach. In ordered mode the\nbaseline is step 0; in any-order mode it is the earliest active hit.\nZero at step 0 when reached; omitted when no subjects or sessions reached it.",
           "filterable": false,
           "name": "median_time_from_start_ms",
           "number": 7,
@@ -22748,7 +22767,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "Exact median milliseconds from the preceding step among subjects (or\nsessions when count_by is session) that reached this step. Zero at step 0\nwhen reached; omitted when no subjects or sessions reached this step.",
+          "doc": "Exact median milliseconds from the preceding hit at first reach: the\npreceding configured step in ordered mode, or chronological hit in any-order mode.\nZero at step 0 when reached; omitted when no subjects or sessions reached it.",
           "filterable": false,
           "name": "median_time_from_previous_ms",
           "number": 8,
@@ -23790,14 +23809,14 @@
       "package": "sylphx.analytics.v1"
     },
     {
-      "doc": "The longest ordered prefix reached by each subject or session within a conversion window.",
+      "doc": "Steps reached by each subject or session within a conversion window.",
       "fields": [
         {
           "behaviors": [
             "REQUIRED"
           ],
           "cli_flag": "",
-          "doc": "Two to 16 event names in step order. Each step must occur at a strictly\nlater event timestamp than the prior step, inside the query interval.",
+          "doc": "Two to 16 event names. Ordered mode requires strictly increasing timestamps\nin this sequence. Any-order mode requires distinct step definitions.",
           "filterable": false,
           "name": "steps",
           "number": 1,
@@ -23933,7 +23952,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "Up to four events that cancel active chains between configured steps.\nExclusion events ignore breakdown and query-wide filters (16 filter pairs total).",
+          "doc": "Up to four events that cancel active attempts. Any-order mode only accepts\nwhole-funnel exclusions (from index 0 through the last step).\nExclusion events ignore breakdown and query-wide filters (16 filter pairs total).",
           "filterable": false,
           "name": "exclusions",
           "number": 8,
@@ -23945,6 +23964,25 @@
           "type": {
             "kind": "message",
             "name": "sylphx.analytics.v1.FunnelExclusion"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Step ordering. Omit to require strictly ordered steps.",
+          "filterable": false,
+          "name": "order",
+          "number": 9,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "enum",
+            "name": "sylphx.analytics.v1.FunnelOrder"
           }
         }
       ],

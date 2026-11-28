@@ -5771,15 +5771,15 @@
             "type": "number"
           },
           "event_name": {
-            "description": "The event name of the step.",
+            "description": "The configured event name at this position. In any-order mode, this is\na label for conversion depth, not the event counted at that depth.",
             "type": "string"
           },
           "median_time_from_previous_ms": {
-            "description": "Exact median milliseconds from the preceding step among subjects (or\nsessions when count_by is session) that reached this step. Zero at step 0\nwhen reached; omitted when no subjects or sessions reached this step.",
+            "description": "Exact median milliseconds from the preceding hit at first reach: the\npreceding configured step in ordered mode, or chronological hit in any-order mode.\nZero at step 0 when reached; omitted when no subjects or sessions reached it.",
             "type": "number"
           },
           "median_time_from_start_ms": {
-            "description": "Exact median milliseconds from step 0 among subjects (or sessions when\ncount_by is session) that reached this step. Zero at step 0 when reached;\nomitted when no subjects or sessions reached this step.",
+            "description": "Exact median elapsed milliseconds at first reach. In ordered mode the\nbaseline is step 0; in any-order mode it is the earliest active hit.\nZero at step 0 when reached; omitted when no subjects or sessions reached it.",
             "type": "number"
           },
           "step_index": {
@@ -6150,8 +6150,16 @@
         ],
         "type": "object"
       },
+      "sylphx.analytics.v1.FunnelOrder": {
+        "description": "How configured funnel steps contribute to conversion depth.",
+        "enum": [
+          "ordered",
+          "any_order"
+        ],
+        "type": "string"
+      },
       "sylphx.analytics.v1.FunnelQuery": {
-        "description": "The longest ordered prefix reached by each subject or session within a conversion window.",
+        "description": "Steps reached by each subject or session within a conversion window.",
         "properties": {
           "breakdown_property": {
             "description": "A top-level property key, matching ^[A-Za-z_][A-Za-z0-9_.]{0,63}$.\nEach step in a chain must have the same string value. Missing and\nnon-string values are grouped with the empty string. Omit for one funnel.",
@@ -6167,7 +6175,7 @@
             "description": "Unit to count at each step. Omit to count subjects."
           },
           "exclusions": {
-            "description": "Up to four events that cancel active chains between configured steps.\nExclusion events ignore breakdown and query-wide filters (16 filter pairs total).",
+            "description": "Up to four events that cancel active attempts. Any-order mode only accepts\nwhole-funnel exclusions (from index 0 through the last step).\nExclusion events ignore breakdown and query-wide filters (16 filter pairs total).",
             "items": {
               "$ref": "#/components/schemas/sylphx.analytics.v1.FunnelExclusion"
             },
@@ -6177,6 +6185,10 @@
             "description": "Maximum breakdown values returned. Defaults to 50; clamped to 1–200.",
             "format": "int32",
             "type": "integer"
+          },
+          "order": {
+            "$ref": "#/components/schemas/sylphx.analytics.v1.FunnelOrder",
+            "description": "Step ordering. Omit to require strictly ordered steps."
           },
           "property_filters": {
             "additionalProperties": {
@@ -6193,7 +6205,7 @@
             "type": "array"
           },
           "steps": {
-            "description": "Two to 16 event names in step order. Each step must occur at a strictly\nlater event timestamp than the prior step, inside the query interval.",
+            "description": "Two to 16 event names. Ordered mode requires strictly increasing timestamps\nin this sequence. Any-order mode requires distinct step definitions.",
             "items": {
               "type": "string"
             },

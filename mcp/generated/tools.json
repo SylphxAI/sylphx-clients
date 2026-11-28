@@ -6941,7 +6941,7 @@
                 "type": "string"
               },
               "exclusions": {
-                "description": "Up to four events that cancel active chains between configured steps.\nExclusion events ignore breakdown and query-wide filters (16 filter pairs total).",
+                "description": "Up to four events that cancel active attempts. Any-order mode only accepts\nwhole-funnel exclusions (from index 0 through the last step).\nExclusion events ignore breakdown and query-wide filters (16 filter pairs total).",
                 "items": {
                   "additionalProperties": false,
                   "description": "An event that cancels an active conversion between two funnel steps.",
@@ -6984,6 +6984,14 @@
                 "format": "int32",
                 "type": "integer"
               },
+              "order": {
+                "description": "Step ordering. Omit to require strictly ordered steps.",
+                "enum": [
+                  "ordered",
+                  "any_order"
+                ],
+                "type": "string"
+              },
               "property_filters": {
                 "additionalProperties": {
                   "type": "string"
@@ -7021,7 +7029,7 @@
                 "type": "array"
               },
               "steps": {
-                "description": "Two to 16 event names in step order. Each step must occur at a strictly\nlater event timestamp than the prior step, inside the query interval.",
+                "description": "Two to 16 event names. Ordered mode requires strictly increasing timestamps\nin this sequence. Any-order mode requires distinct step definitions.",
                 "items": {
                   "type": "string"
                 },
@@ -54120,7 +54128,7 @@
                 "type": "string"
               },
               "exclusions": {
-                "description": "Up to four events that cancel active chains between configured steps.\nExclusion events ignore breakdown and query-wide filters (16 filter pairs total).",
+                "description": "Up to four events that cancel active attempts. Any-order mode only accepts\nwhole-funnel exclusions (from index 0 through the last step).\nExclusion events ignore breakdown and query-wide filters (16 filter pairs total).",
                 "items": {
                   "additionalProperties": false,
                   "description": "An event that cancels an active conversion between two funnel steps.",
@@ -54163,6 +54171,14 @@
                 "format": "int32",
                 "type": "integer"
               },
+              "order": {
+                "description": "Step ordering. Omit to require strictly ordered steps.",
+                "enum": [
+                  "ordered",
+                  "any_order"
+                ],
+                "type": "string"
+              },
               "property_filters": {
                 "additionalProperties": {
                   "type": "string"
@@ -54200,7 +54216,7 @@
                 "type": "array"
               },
               "steps": {
-                "description": "Two to 16 event names in step order. Each step must occur at a strictly\nlater event timestamp than the prior step, inside the query interval.",
+                "description": "Two to 16 event names. Ordered mode requires strictly increasing timestamps\nin this sequence. Any-order mode requires distinct step definitions.",
                 "items": {
                   "type": "string"
                 },

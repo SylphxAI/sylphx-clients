@@ -103,7 +103,10 @@ export interface AnalyticsEvent {
 export interface AnalyticsFunnelStep {
 	/** Zero-based step position in the request. */
 	stepIndex?: number
-	/** The event name of the step. */
+	/**
+	 * The configured event name at this position. In any-order mode, this is
+	 * a label for conversion depth, not the event counted at that depth.
+	 */
 	eventName?: string
 	/** The breakdown value; empty for an unsegmented funnel. */
 	breakdownValue?: string
@@ -120,15 +123,15 @@ export interface AnalyticsFunnelStep {
 	 */
 	conversionFromPreviousPct?: number
 	/**
-	 * Exact median milliseconds from step 0 among subjects (or sessions when
-	 * count_by is session) that reached this step. Zero at step 0 when reached;
-	 * omitted when no subjects or sessions reached this step.
+	 * Exact median elapsed milliseconds at first reach. In ordered mode the
+	 * baseline is step 0; in any-order mode it is the earliest active hit.
+	 * Zero at step 0 when reached; omitted when no subjects or sessions reached it.
 	 */
 	medianTimeFromStartMs?: number
 	/**
-	 * Exact median milliseconds from the preceding step among subjects (or
-	 * sessions when count_by is session) that reached this step. Zero at step 0
-	 * when reached; omitted when no subjects or sessions reached this step.
+	 * Exact median milliseconds from the preceding hit at first reach: the
+	 * preceding configured step in ordered mode, or chronological hit in any-order mode.
+	 * Zero at step 0 when reached; omitted when no subjects or sessions reached it.
 	 */
 	medianTimeFromPreviousMs?: number
 }
@@ -338,11 +341,11 @@ export interface FunnelExclusion {
 	propertyFilters?: Record<string, string>
 }
 
-/** The longest ordered prefix reached by each subject or session within a conversion window. */
+/** Steps reached by each subject or session within a conversion window. */
 export interface FunnelQuery {
 	/**
-	 * Two to 16 event names in step order. Each step must occur at a strictly
-	 * later event timestamp than the prior step, inside the query interval.
+	 * Two to 16 event names. Ordered mode requires strictly increasing timestamps
+	 * in this sequence. Any-order mode requires distinct step definitions.
 	 */
 	steps?: string[]
 	/** Seconds allowed from the first step, inclusive; 1 to 2592000 (30 days). */
@@ -368,10 +371,13 @@ export interface FunnelQuery {
 	 */
 	stepFilters?: FunnelStepFilter[]
 	/**
-	 * Up to four events that cancel active chains between configured steps.
+	 * Up to four events that cancel active attempts. Any-order mode only accepts
+	 * whole-funnel exclusions (from index 0 through the last step).
 	 * Exclusion events ignore breakdown and query-wide filters (16 filter pairs total).
 	 */
 	exclusions?: FunnelExclusion[]
+	/** Step ordering. Omit to require strictly ordered steps. */
+	order?: FunnelOrder
 }
 
 /**
@@ -617,6 +623,9 @@ export type EventStatus = 'accepted' | 'duplicate' | 'rejected' | (string & {})
 
 /** Unit counted in a funnel step. */
 export type FunnelCountBy = 'subject' | 'session' | (string & {})
+
+/** How configured funnel steps contribute to conversion depth. */
+export type FunnelOrder = 'ordered' | 'any_order' | (string & {})
 
 /** The width of a UTC retention period. */
 export type RetentionInterval = 'day' | 'week' | (string & {})
