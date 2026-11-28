@@ -191,8 +191,52 @@ impl SourceTree {
         target.check_session(conn).await?;
         runtime_roles::verify(conn, roles).await?;
         let report = self.inspect(conn).await?;
+        let pending = self.release_pending(&report)?;
+        Ok(ReleasePlan {
+            seal: self.seal_with_runtime_roles(target, &report, roles)?,
+            pending,
+        })
+    }
+
+    /// Plan a sealed Release on the canonical PostgreSQL ledger.
+    pub async fn release_plan_for_data_migrate(
+        &self,
+        conn: &mut PgConnection,
+        target: &ReleaseTarget,
+        roles: &RuntimeRoles,
+    ) -> Result<ReleasePlan> {
+        if self.files.is_empty() {
+            return Err("native migration source is empty".into());
+        }
+        let (report, seal, _) = postgres::data_migrate::report(conn, self, target, roles).await?;
+        Ok(ReleasePlan {
+            seal,
+            pending: self.release_pending(&report)?,
+        })
+    }
+
+    pub(super) fn seal_data_migrate(
+        &self,
+        target: &ReleaseTarget,
+        report: &Report<'_>,
+        roles: &RuntimeRoles,
+        legacy_exists: bool,
+        receipts: &std::collections::BTreeMap<i64, String>,
+    ) -> Result<String> {
+        let seal = self.seal_with_runtime_roles(target, report, roles)?;
+        let bytes = serde_json::to_vec(&(
+            "sylphx-release-data-migrate-v1",
+            seal,
+            legacy_exists,
+            receipts,
+        ))
+        .map_err(|_| "cannot encode data-migrate plan")?;
+        Ok(format!("{:x}", Sha256::digest(bytes)))
+    }
+
+    fn release_pending(&self, report: &Report<'_>) -> Result<Vec<(String, String)>> {
         // Pending SQL must pass the runner's lint before a release can roll.
-        let pending = report
+        report
             .pending
             .iter()
             .map(|file| {
@@ -205,11 +249,7 @@ impl SourceTree {
                 }
                 Ok((m.file.clone(), m.sql.clone()))
             })
-            .collect::<Result<_>>()?;
-        Ok(ReleasePlan {
-            seal: self.seal_with_runtime_roles(target, &report, roles)?,
-            pending,
-        })
+            .collect()
     }
 
     /// Revalidate the exact legacy seal without writing. The caller must retain
@@ -271,7 +311,10 @@ mod tests {
         );
         tree.runtime_roles = crate::RuntimeRoles::new(["api_runtime"]).unwrap();
         let one = tree.seal(&target, &report).unwrap();
-        assert_ne!(legacy, one);
+        assert_eq!(
+            one,
+            "2184ecef12120b20c3d8983678a348d9de250576bf62aae2d900d64d3a49b99d"
+        );
         tree.runtime_roles = crate::RuntimeRoles::new(["worker_runtime", "api_runtime"]).unwrap();
         let two = tree.seal(&target, &report).unwrap();
         assert_ne!(one, two);

@@ -14,6 +14,7 @@ use super::{
     valid_id, Files, Migration, ReleaseTarget, Result, SourceTree,
 };
 
+pub(super) mod data_migrate;
 const LEDGER: &str = "public._sylphx_migrations";
 const SQLX: &str = "public._sqlx_migrations";
 const ATLAS: [&str; 2] = [

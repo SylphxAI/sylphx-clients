@@ -333,3 +333,127 @@ async fn postgres_migration_proof() {
         .await
         .unwrap();
 }
+
+#[tokio::test]
+#[ignore = "requires disposable PostgreSQL admin URL: SYLPHX_MIGRATE_TEST_DATABASE_URL"]
+async fn postgres_migration_proof_data_migrate() {
+    use sylphx_migrate::{ReleasePlan, ReleaseTarget, RuntimeRoles, SourceTree};
+
+    let opts: PgConnectOptions = std::env::var("SYLPHX_MIGRATE_TEST_DATABASE_URL")
+        .expect("explicit disposable PostgreSQL fixture URL")
+        .parse()
+        .unwrap();
+    assert!(opts.get_socket().is_some() || opts.get_host() == "127.0.0.1");
+    let name = format!("canonical_plan_{}", std::process::id());
+    let mut admin = PgConnection::connect_with(&opts).await.unwrap();
+    sql(
+        &mut admin,
+        &format!("CREATE ROLE {name} LOGIN PASSWORD 'fixture-only'"),
+    )
+    .await;
+    sql(&mut admin, &format!("CREATE DATABASE {name}")).await;
+    let opts = opts.database(&name);
+    let mut setup = PgConnection::connect_with(&opts).await.unwrap();
+    sql(
+        &mut setup,
+        &format!("GRANT USAGE, CREATE ON SCHEMA public TO {name}"),
+    )
+    .await;
+    let mut pg = PgConnection::connect_with(&opts.username(&name).password("fixture-only"))
+        .await
+        .unwrap();
+    let target = ReleaseTarget::parse(&format!(
+        "postgresql://{name}@127.0.0.1/{name}?sslmode=disable"
+    ))
+    .unwrap();
+    let first = (
+        "202611260001_first.sql".into(),
+        "CREATE TABLE first (id bigint);".into(),
+    );
+    let next = (
+        "202611260002_next.sql".into(),
+        "CREATE TABLE next (id bigint);".into(),
+    );
+    let baseline = SourceTree::from_blobs(vec![first.clone()], None).unwrap();
+    let tree = SourceTree::from_blobs(vec![first, next.clone()], None).unwrap();
+    let roles = RuntimeRoles::default();
+    assert!(matches!(
+        baseline.apply(&mut pg).await.unwrap(),
+        sylphx_migrate::Apply::Applied(_)
+    ));
+    let legacy = tree.release_plan(&mut pg, &target).await.unwrap();
+    assert_eq!(legacy.pending, std::slice::from_ref(&next));
+    assert_eq!(
+        legacy.seal,
+        tree.seal(&target, &tree.inspect(&mut pg).await.unwrap())
+            .unwrap()
+    );
+
+    for (ddl, reason) in [
+        ("", "_data_migrate is missing"),
+        ("CREATE SCHEMA _data_migrate", "_data_migrate must be owned"),
+    ] {
+        if !ddl.is_empty() {
+            sql(&mut setup, ddl).await;
+        }
+        refused(
+            tree.release_plan_for_data_migrate(&mut pg, &target, &roles)
+                .await,
+            reason,
+        );
+    }
+    sql(
+        &mut setup,
+        &format!("ALTER SCHEMA _data_migrate OWNER TO {name}"),
+    )
+    .await;
+    let initial = baseline
+        .release_plan_for_data_migrate(&mut pg, &target, &roles)
+        .await
+        .unwrap();
+    assert!(initial.pending.is_empty());
+    sql(&mut pg, "CREATE TABLE _data_migrate._data_schema_migrations (version bigint PRIMARY KEY, checksum text NOT NULL, origin text NOT NULL, completed boolean NOT NULL);
+         INSERT INTO _data_migrate._data_schema_migrations SELECT id, sha256, 'sha256_takeover', true FROM public._sylphx_migrations").await;
+    let takeover = baseline
+        .release_plan_for_data_migrate(&mut pg, &target, &roles)
+        .await
+        .unwrap();
+    assert!(takeover.pending.is_empty());
+    assert_ne!(takeover.seal, initial.seal);
+    let plan = tree
+        .release_plan_for_data_migrate(&mut pg, &target, &roles)
+        .await
+        .unwrap();
+    assert_eq!(plan.pending, std::slice::from_ref(&next));
+    let checksum = format!("{:x}", Sha256::digest(next.1.as_bytes()));
+    sql(&mut pg, &format!("INSERT INTO _data_migrate._data_schema_migrations VALUES (202611260002, '{checksum}', 'native', true)")).await;
+    assert!(tree
+        .release_plan_for_data_migrate(&mut pg, &target, &roles)
+        .await
+        .unwrap()
+        .pending
+        .is_empty());
+    for (stmt, reason) in [
+        ("UPDATE _data_migrate._data_schema_migrations SET checksum = repeat('0', 64) WHERE version = 202611260001", "checksum mismatch"),
+        ("DELETE FROM _data_migrate._data_schema_migrations WHERE version = 202611260001", "missing canonical takeover receipt"),
+    ] {
+        sql(&mut pg, stmt).await;
+        refused(tree.release_plan_for_data_migrate(&mut pg, &target, &roles).await, reason);
+    }
+    let unchanged = tree.release_plan(&mut pg, &target).await.unwrap();
+    assert_eq!(
+        (unchanged.pending, unchanged.seal),
+        (legacy.pending, legacy.seal)
+    );
+    drop((pg, setup));
+    sql(&mut admin, &format!("DROP DATABASE {name}")).await;
+    sql(&mut admin, &format!("DROP ROLE {name}")).await;
+
+    async fn sql(pg: &mut PgConnection, stmt: &str) {
+        pg.execute(stmt).await.unwrap();
+    }
+    fn refused(plan: Result<ReleasePlan, String>, reason: &str) {
+        let err = plan.err().expect("expected refusal");
+        assert!(err.contains(reason), "{err}");
+    }
+}
